@@ -501,6 +501,10 @@ var (
 		Name:  "allow-insecure-unlock",
 		Usage: "Allow insecure account unlocking when account-related RPCs are exposed by http",
 	}
+	BlacklistPath = cli.StringFlag{
+		Name:  "blacklist",
+		Usage: "Block the address in blacklist file",
+	}
 	RPCGlobalGasCapFlag = cli.Uint64Flag{
 		Name:  "rpc.gascap",
 		Usage: "Sets a cap on gas that can be used in eth_call/estimateGas (0=infinite)",
@@ -1245,6 +1249,12 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	}
 	if ctx.GlobalIsSet(InsecureUnlockAllowedFlag.Name) {
 		cfg.InsecureUnlockAllowed = ctx.GlobalBool(InsecureUnlockAllowedFlag.Name)
+	}
+	// set blacklist file path
+	if ctx.GlobalIsSet(BlacklistPath.Name) {
+		cfg.BlacklistPath = ctx.GlobalString(BlacklistPath.Name)
+	} else {
+		cfg.BlacklistPath = filepath.Join(cfg.DataDir, "blacklist.json")
 	}
 }
 

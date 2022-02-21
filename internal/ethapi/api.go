@@ -20,8 +20,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"strings"
 	"time"
@@ -963,6 +965,11 @@ func (e *revertError) ErrorData() interface{} {
 // Note, this function doesn't make and changes in the state/blockchain and is
 // useful to execute and retrieve values.
 func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *StateOverride) (hexutil.Bytes, error) {
+	// check if 'to' address is in blacklist
+	if isInBlacklist(s.b, args.To) {
+		return nil, fmt.Errorf("address (%v) is in blocklist", args.To.String())
+	}
+
 	result, err := DoCall(ctx, s.b, args, blockNrOrHash, overrides, vm.Config{}, 5*time.Second, s.b.RPCGasCap())
 	if err != nil {
 		return nil, err
@@ -972,6 +979,32 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOr
 		return nil, newRevertError(result)
 	}
 	return result.Return(), result.Err
+}
+
+func loadBlackList(blackListFile string) (map[string]struct{}, error) {
+	chainConfig, err := ioutil.ReadFile(blackListFile)
+	if err != nil {
+		return nil, err
+	}
+	var list []string
+	if err := json.Unmarshal(chainConfig, &list); err != nil {
+		return nil, err
+	}
+	var result = make(map[string]struct{})
+	for _, s := range list {
+		result[s] = struct{}{}
+	}
+	return result, nil
+}
+
+func isInBlacklist(b Backend, address *common.Address) bool {
+	blacklist, err := loadBlackList(b.AccountManager().Config().BlacklistPath)
+	if err != nil {
+		log.Warn("### Blacklist file not found.")
+		return false
+	}
+	_, ok := blacklist[address.String()]
+	return ok
 }
 
 func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, gasCap uint64) (hexutil.Uint64, error) {
@@ -1766,6 +1799,11 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
 func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+	// check if 'to' address is in blacklist
+	if isInBlacklist(s.b, args.To) {
+		return common.Hash{}, fmt.Errorf("address (%v) is in blocklist", args.To.String())
+	}
+
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: args.From}
 
@@ -1817,6 +1855,10 @@ func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, input
 	tx := new(types.Transaction)
 	if err := tx.UnmarshalBinary(input); err != nil {
 		return common.Hash{}, err
+	}
+	// check if 'to' address is in blacklist
+	if isInBlacklist(s.b, tx.To()) {
+		return common.Hash{}, fmt.Errorf("address (%v) is in blocklist", tx.To().String())
 	}
 	return SubmitTransaction(ctx, s.b, tx)
 }
