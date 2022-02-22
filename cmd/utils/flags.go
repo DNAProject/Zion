@@ -1251,11 +1251,10 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 		cfg.InsecureUnlockAllowed = ctx.GlobalBool(InsecureUnlockAllowedFlag.Name)
 	}
 	// set blacklist file path
-	if ctx.GlobalIsSet(BlacklistPath.Name) {
-		cfg.BlacklistPath = ctx.GlobalString(BlacklistPath.Name)
-	} else {
-		cfg.BlacklistPath = filepath.Join(cfg.DataDir, "blacklist.json")
+	if !ctx.GlobalIsSet(BlacklistPath.Name) {
+		ctx.GlobalSet(BlacklistPath.Name, filepath.Join(cfg.DataDir, "blacklist.json"))
 	}
+	cfg.BlacklistPath = ctx.GlobalString(BlacklistPath.Name)
 }
 
 func setSmartCard(ctx *cli.Context, cfg *node.Config) {
@@ -1366,6 +1365,10 @@ func setTxPool(ctx *cli.Context, cfg *core.TxPoolConfig) {
 	}
 	if ctx.GlobalIsSet(TxPoolLifetimeFlag.Name) {
 		cfg.Lifetime = ctx.GlobalDuration(TxPoolLifetimeFlag.Name)
+	}
+	// set blacklist path for txpool
+	if ctx.GlobalIsSet(BlacklistPath.Name) {
+		cfg.BlacklistPath = ctx.GlobalString(BlacklistPath.Name)
 	}
 }
 
