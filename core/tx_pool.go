@@ -17,9 +17,7 @@
 package core
 
 import (
-	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"math"
 	"math/big"
 	"sort"
@@ -65,8 +63,8 @@ var (
 	// configured for the transaction pool.
 	ErrUnderpriced = errors.New("transaction underpriced")
 
-	// ErrBlacklist is returned if a transaction's to address is in blacklist
-	ErrBlacklist = errors.New("transaction's to address is in blacklist")
+	// ErrBlacklist is returned if a transaction's address is in blacklist
+	ErrBlacklist = errors.New("transaction's address is in blacklist")
 
 	// ErrTxPoolOverflow is returned if the transaction pool is full and can't accpet
 	// another remote transaction.
@@ -158,8 +156,6 @@ type TxPoolConfig struct {
 	GlobalQueue  uint64 // Maximum number of non-executable transaction slots for all accounts
 
 	Lifetime time.Duration // Maximum amount of time non-executable transaction are queued
-
-	BlacklistPath string // Blacklist file path
 }
 
 // DefaultTxPoolConfig contains the default configurations for the transaction
@@ -521,32 +517,6 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 	return txs
 }
 
-func loadBlackList(blackListFile string) (map[string]struct{}, error) {
-	chainConfig, err := ioutil.ReadFile(blackListFile)
-	if err != nil {
-		return nil, err
-	}
-	var list []string
-	if err := json.Unmarshal(chainConfig, &list); err != nil {
-		return nil, err
-	}
-	var result = make(map[string]struct{})
-	for _, s := range list {
-		result[s] = struct{}{}
-	}
-	return result, nil
-}
-
-func isInBlacklist(pool *TxPool, address *common.Address) bool {
-	blacklist, err := loadBlackList(pool.config.BlacklistPath)
-	if err != nil {
-		log.Warn("### Blacklist file not found.")
-		return false
-	}
-	_, ok := blacklist[address.String()]
-	return ok
-}
-
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
@@ -574,9 +544,11 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 
 	// block transaction in blacklist file
-	if isInBlacklist(pool, tx.To()) {
+	bsnConfig := params.GetBsnConfig()
+	if bsnConfig.IsInBlacklist(tx.To()) || bsnConfig.IsInBlacklist(&from) {
 		return ErrBlacklist
 	}
+
 	// Drop non-local transactions under our own minimal accepted gas price or tip
 	log.Trace("### Txpool gas limit", "local", local, "tx gasPrice", tx.GasPrice(), "pool gasPrice", pool.gasPrice)
 	// if !local && tx.GasTipCapIntCmp(pool.gasPrice) < 0 {

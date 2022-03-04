@@ -92,8 +92,8 @@ type Config struct {
 	// InsecureUnlockAllowed allows user to unlock accounts in unsafe http environment.
 	InsecureUnlockAllowed bool `toml:",omitempty"`
 
-	// Blacklist file path.
-	BlacklistPath string `toml:",omitempty"`
+	// Bsn config file path.
+	BsnPath string `toml:",omitempty"`
 
 	// NoUSB disables hardware wallet monitoring and connectivity.
 	NoUSB bool `toml:",omitempty"`
@@ -521,7 +521,7 @@ func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
 		}
 	}
 
-	return accounts.NewManager(&accounts.Config{InsecureUnlockAllowed: conf.InsecureUnlockAllowed, BlacklistPath: conf.BlacklistPath}, backends...), ephemeral, nil
+	return accounts.NewManager(&accounts.Config{InsecureUnlockAllowed: conf.InsecureUnlockAllowed}, backends...), ephemeral, nil
 }
 
 var warnLock sync.Mutex

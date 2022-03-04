@@ -501,9 +501,9 @@ var (
 		Name:  "allow-insecure-unlock",
 		Usage: "Allow insecure account unlocking when account-related RPCs are exposed by http",
 	}
-	BlacklistPath = cli.StringFlag{
-		Name:  "blacklist",
-		Usage: "Block the address in blacklist file",
+	BsnPath = cli.StringFlag{
+		Name:  "bsn",
+		Usage: "Block the address in bsn config file",
 	}
 	RPCGlobalGasCapFlag = cli.Uint64Flag{
 		Name:  "rpc.gascap",
@@ -1250,11 +1250,13 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(InsecureUnlockAllowedFlag.Name) {
 		cfg.InsecureUnlockAllowed = ctx.GlobalBool(InsecureUnlockAllowedFlag.Name)
 	}
-	// set blacklist file path
-	if !ctx.GlobalIsSet(BlacklistPath.Name) {
-		ctx.GlobalSet(BlacklistPath.Name, filepath.Join(cfg.DataDir, "blacklist.json"))
+	// set bsn file path
+	if !ctx.GlobalIsSet(BsnPath.Name) {
+		ctx.GlobalSet(BsnPath.Name, filepath.Join(cfg.DataDir, "bsn.json"))
 	}
-	cfg.BlacklistPath = ctx.GlobalString(BlacklistPath.Name)
+	cfg.BsnPath = ctx.GlobalString(BsnPath.Name)
+	log.Warn("### BsnConfig file path: " + cfg.BsnPath)
+	params.StartBsnTask(cfg.BsnPath)
 }
 
 func setSmartCard(ctx *cli.Context, cfg *node.Config) {
@@ -1365,10 +1367,6 @@ func setTxPool(ctx *cli.Context, cfg *core.TxPoolConfig) {
 	}
 	if ctx.GlobalIsSet(TxPoolLifetimeFlag.Name) {
 		cfg.Lifetime = ctx.GlobalDuration(TxPoolLifetimeFlag.Name)
-	}
-	// set blacklist path for txpool
-	if ctx.GlobalIsSet(BlacklistPath.Name) {
-		cfg.BlacklistPath = ctx.GlobalString(BlacklistPath.Name)
 	}
 }
 
