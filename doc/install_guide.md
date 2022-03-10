@@ -6,7 +6,7 @@ ubuntu 16或18
 centOS 7
 golang版本1.14及以上，同时需要C编译器
 
-## 1.4. 打开项目代码目录，运行代码目录中 consensus/hotstuff/tool/encoder_test.go 的TestGenerateAndEncode(), 修改节点数，生成所需配置，并记录拷贝
+## 1.2. 打开项目代码目录，运行代码目录中 consensus/hotstuff/tool/encoder_test.go 的TestGenerateAndEncode(), 修改节点数，生成所需配置，并记录拷贝
 
 ```
 cd /projecthome/consensus/hotstuff/tool
@@ -37,7 +37,7 @@ go test -v -run TestGenerateAndEncode
         ]
 ```
 
-## 1.5. 从安装包中拷贝setup(node i(1-7)目录， genesis.json， static-nodes.json), init.sh, start.sh, stop.sh, geth二进制文件到链的安装目录根目录下
+## 1.3. 从安装包中拷贝setup(node i(1-7)目录， genesis.json， static-nodes.json), init.sh, start.sh, stop.sh, geth二进制文件到链的安装目录根目录下
 
 ```
 cp setup /to/your/installpath
@@ -46,7 +46,7 @@ cp start.sh /to/your/installpath
 cp stop.sh /to/your/installpath
 ```
 
-## 1.6. 将setup/node i的目录中的nodekey和pubkey改成data.inf对应的key
+## 1.4. 将setup/node i的目录中的nodekey和pubkey改成data.inf对应的key
 
 ```
 cd setup
@@ -54,7 +54,7 @@ cd setup
 顺序修改node0-node7中的nodekey和pubkey，将data.inf中的nodeKey和pubKey按顺序填入七节点
 其中nodeKey的填入要删除0x前缀
 
-## 1.7. 修改genesis.json和static-nodes.json,替换chainId，alloc，extraData，和ecode url
+## 1.5. 修改genesis.json和static-nodes.json,替换chainId，alloc，extraData，和ecode url
 
 ```
 vim setup/genesis.json
@@ -70,20 +70,20 @@ vim setup/static-nodes.json
 ```
 将data.inf的encode url信息替换到文件中，注意要根据机器节点情况修改对应ip和port
 
-## 1.8. 执行init.sh
+## 1.6. 执行init.sh
 
 按顺序执行7遍init.sh, 在console的交互中输入0-6的节点号
 
-## 1.9. 修改start.sh
+## 1.7. 修改start.sh
 
 修改start.sh的coinbase，填入七个节点的私钥地址
 如果修改了genesis.json文件的chainId的话，要修改启动参数的chainid
 
-## 1.10. 启动节点
+## 1.8. 启动节点
 
 执行7遍start.sh, 在console的交互中顺序输入0-6的节点号
 
-## 1.11. 停止节点
+## 1.9. 停止节点
 
 执行7遍stop.sh，在console的交互中顺序输入0-6的节点号
 
