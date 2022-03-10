@@ -963,10 +963,10 @@ func (e *revertError) ErrorData() interface{} {
 // Note, this function doesn't make and changes in the state/blockchain and is
 // useful to execute and retrieve values.
 func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *StateOverride) (hexutil.Bytes, error) {
-	// check if address is in blacklist
+	// check bsn config
 	bsnConfig := params.GetBsnConfig()
-	if bsnConfig.IsInBlacklist(args.To) || bsnConfig.IsInBlacklist(args.From) {
-		return nil, fmt.Errorf("address is in blocklist")
+	if !bsnConfig.CheckBlacklist(args.From, args.To) {
+		return nil, params.ErrBlacklist
 	}
 
 	result, err := DoCall(ctx, s.b, args, blockNrOrHash, overrides, vm.Config{}, 5*time.Second, s.b.RPCGasCap())
@@ -1772,10 +1772,15 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
 func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
-	// check if address is in blacklist
+	// check bsn config
 	bsnConfig := params.GetBsnConfig()
-	if bsnConfig.IsInBlacklist(args.To) || bsnConfig.IsInBlacklist(&(args.From)) {
-		return common.Hash{}, fmt.Errorf("address is in blocklist")
+	if !bsnConfig.CheckBlacklist(&(args.From), args.To) {
+		return common.Hash{}, params.ErrBlacklist
+	}
+	if args.Value.ToInt().Cmp(common.Big0) > 0 {
+		if !bsnConfig.CheckGasManage(&(args.From), args.To) {
+			return common.Hash{}, params.ErrGasManage
+		}
 	}
 
 	// Look up the wallet containing the requested signer
@@ -1830,12 +1835,18 @@ func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, input
 	if err := tx.UnmarshalBinary(input); err != nil {
 		return common.Hash{}, err
 	}
-	// check if address is in blacklist
+	// check bsn config
 	bsnConfig := params.GetBsnConfig()
 	from, _ := types.Sender(s.signer, tx)
-	if bsnConfig.IsInBlacklist(tx.To()) || bsnConfig.IsInBlacklist(&(from)) {
-		return common.Hash{}, fmt.Errorf("address is in blocklist")
+	if !bsnConfig.CheckBlacklist(&(from), tx.To()) {
+		return common.Hash{}, params.ErrBlacklist
 	}
+	if tx.Value().Cmp(common.Big0) > 0 {
+		if !bsnConfig.CheckGasManage(&(from), tx.To()) {
+			return common.Hash{}, params.ErrGasManage
+		}
+	}
+
 	return SubmitTransaction(ctx, s.b, tx)
 }
 

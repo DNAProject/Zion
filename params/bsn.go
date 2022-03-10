@@ -2,7 +2,10 @@ package params
 
 import (
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"io/ioutil"
+	"net"
 	"os"
 	"strings"
 	"sync"
@@ -16,36 +19,51 @@ var instance *bsnConfig
 var mu sync.RWMutex
 var once sync.Once
 
+var (
+	// ErrIpWhitelist is returned if the node ip is not in whitelist
+	ErrIpWhitelist = errors.New("### BsnConfig ip address is not in whitelist")
+
+	// ErrBlacklist is returned if a transaction's address is in blacklist
+	ErrBlacklist = errors.New("### BsnConfig transaction's address is in blacklist")
+
+	// ErrGasManage is returned if a transaction's address is not in GasManage Accounts
+	ErrGasManage = errors.New("### BsnConfig transaction's address is not in GasManage Accounts")
+)
+
 // BsnConfig is the config which determines the blockchain settings about ipwhitelist, address blacklist and manage accounts.
 type bsnConfigFile struct {
-	IpWhitelist       []string `json:"ipWhitelist"`       // only the ip in IpWhitelist can connect to this node with p2p network
-	P2pManageAccounts []string `json:"p2pManageAccounts"` // transfer manage accounts
-	P2pTransferEnable bool     `json:"p2pTransferEnable"` // only manage accounts can be from or to address when the P2pTransferEnable is false
+	IpWhitelistEnable bool     `json:"ipWhitelistEnable"` // only the ip in IpWhitelist can connect to this node with p2p network when the IpWhitelistEnable is true, default false
+	IpWhitelist       []string `json:"ipWhitelist"`       // ip whitelist
+	GasManageEnable   bool     `json:"gasManageEnable"`   // only manage accounts can be from or to address when the GasManageEnable is true, default false
+	GasManageAccounts []string `json:"gasManageAccounts"` // gas transfer manage accounts
+	BlacklistEnable   bool     `json:"blacklistEnable"`   // blacklist function is enabled when the blacklistEnable is true, default false
 	Blacklist         []string `json:"blacklist"`         // the address in blacklist can't be from or to address
 }
 
 type bsnConfig struct {
+	ipWhitelistEnable bool
 	ipWhitelist       map[string]struct{}
-	p2pManageAccounts map[string]struct{}
-	p2pTransferEnable bool
+	gasManageEnable   bool
+	gasManageAccounts map[string]struct{}
+	blacklistEnable   bool
 	blacklist         map[string]struct{}
 }
 
 func StartBsnTask(filepath string) {
 	go func() {
-		initialStat, err := os.Stat(filepath)
-		if err != nil {
-			log.Error("### initialStat error. " + err.Error())
-		}
+		var initialStat fs.FileInfo
 
 		for {
 			stat, err := os.Stat(filepath)
 			if err != nil {
-				log.Warn("### os.Stat failed. " + err.Error())
+				log.Warn("### StartBsnTask os.Stat error. " + err.Error())
+				time.Sleep(time.Second)
+				continue
 			}
 
-			if stat.Size() != initialStat.Size() || stat.ModTime() != initialStat.ModTime() {
+			if initialStat == nil || stat.Size() != initialStat.Size() || stat.ModTime() != initialStat.ModTime() {
 				err = loadBsnConfig(filepath)
+				initialStat = stat
 				if err != nil {
 					log.Warn("### LoadBsnConfig file failed. " + err.Error())
 				}
@@ -69,60 +87,94 @@ func loadBsnConfig(path string) error {
 	instance = GetBsnConfig()
 	mu.Lock()
 	defer mu.Unlock()
-	instance.ipWhitelist = convertToMap(res.IpWhitelist)
-	instance.p2pManageAccounts = convertToMap(res.P2pManageAccounts)
-	instance.p2pTransferEnable = res.P2pTransferEnable
-	instance.blacklist = convertToMap(res.Blacklist)
+	instance.ipWhitelistEnable = res.IpWhitelistEnable
+	instance.ipWhitelist = convertToIPMap(res.IpWhitelist)
+	instance.gasManageEnable = res.GasManageEnable
+	instance.gasManageAccounts = convertToAddressMap(res.GasManageAccounts)
+	instance.blacklistEnable = res.BlacklistEnable
+	instance.blacklist = convertToAddressMap(res.Blacklist)
 	return nil
 }
 
-func convertToMap(list []string) map[string]struct{} {
+func convertToIPMap(list []string) map[string]struct{} {
 	var result = make(map[string]struct{})
 	for _, s := range list {
-		// todo: add address format check
-		// store address as lower case
-		result[strings.ToLower(s)] = struct{}{}
+		// ip format check
+		if net.ParseIP(s) != nil {
+			result[s] = struct{}{}
+		}
+	}
+	return result
+}
+
+func convertToAddressMap(list []string) map[string]struct{} {
+	var result = make(map[string]struct{})
+	for _, s := range list {
+		// address format check
+		if common.IsHexAddress(s) {
+			// store address as lower case
+			result[strings.ToLower(s)] = struct{}{}
+		}
 	}
 	return result
 }
 
 func GetBsnConfig() *bsnConfig {
 	once.Do(func() {
-		instance = &bsnConfig{p2pTransferEnable: true}
+		instance = &bsnConfig{}
 	})
 
 	return instance
 }
 
-func (config *bsnConfig) IsInIpWhitelist(address *common.Address) bool {
+func (config *bsnConfig) CheckIpWhitelist(ip net.IP) bool {
 	mu.RLock()
 	defer mu.RUnlock()
 
-	if address == nil || config.ipWhitelist == nil {
+	if !config.ipWhitelistEnable {
+		return true
+	}
+
+	if ip == nil {
 		return false
 	}
-	_, ok := config.ipWhitelist[strings.ToLower(address.String())]
-	return ok
+
+	return isInMap(ip.String(), config.ipWhitelist)
 }
 
-func (config *bsnConfig) IsInP2pManageAccounts(address *common.Address) bool {
+func (config *bsnConfig) CheckGasManage(from *common.Address, to *common.Address) bool {
 	mu.RLock()
 	defer mu.RUnlock()
 
-	if address == nil || config.p2pManageAccounts == nil {
-		return false
+	if !config.gasManageEnable {
+		return true
 	}
-	_, ok := config.p2pManageAccounts[strings.ToLower(address.String())]
-	return ok
+	return isAddressInMap(from, config.gasManageAccounts) || isAddressInMap(to, config.gasManageAccounts)
 }
 
-func (config *bsnConfig) IsInBlacklist(address *common.Address) bool {
+func (config *bsnConfig) CheckBlacklist(from *common.Address, to *common.Address) bool {
 	mu.RLock()
 	defer mu.RUnlock()
 
-	if address == nil || config.blacklist == nil {
+	if !config.blacklistEnable {
+		return true
+	}
+	return !isAddressInMap(from, config.blacklist) && !isAddressInMap(to, config.blacklist)
+}
+
+func isAddressInMap(address *common.Address, m map[string]struct{}) bool {
+	if address == nil {
 		return false
 	}
-	_, ok := config.blacklist[strings.ToLower(address.String())]
+
+	return isInMap(strings.ToLower(address.String()), m)
+}
+
+func isInMap(s string, m map[string]struct{}) bool {
+	if len(m) == 0 {
+		return false
+	}
+
+	_, ok := m[s]
 	return ok
 }

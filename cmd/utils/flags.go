@@ -503,7 +503,7 @@ var (
 	}
 	BsnPath = cli.StringFlag{
 		Name:  "bsn",
-		Usage: "Block the address in bsn config file",
+		Usage: "bsn config file path",
 	}
 	RPCGlobalGasCapFlag = cli.Uint64Flag{
 		Name:  "rpc.gascap",

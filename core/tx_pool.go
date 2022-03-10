@@ -63,9 +63,6 @@ var (
 	// configured for the transaction pool.
 	ErrUnderpriced = errors.New("transaction underpriced")
 
-	// ErrBlacklist is returned if a transaction's address is in blacklist
-	ErrBlacklist = errors.New("transaction's address is in blacklist")
-
 	// ErrTxPoolOverflow is returned if the transaction pool is full and can't accpet
 	// another remote transaction.
 	ErrTxPoolOverflow = errors.New("txpool is full")
@@ -543,10 +540,15 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrInvalidSender
 	}
 
-	// block transaction in blacklist file
+	// check bsn config
 	bsnConfig := params.GetBsnConfig()
-	if bsnConfig.IsInBlacklist(tx.To()) || bsnConfig.IsInBlacklist(&from) {
-		return ErrBlacklist
+	if !bsnConfig.CheckBlacklist(&from, tx.To()) {
+		return params.ErrBlacklist
+	}
+	if tx.Value().Cmp(common.Big0) > 0 {
+		if !bsnConfig.CheckGasManage(&from, tx.To()) {
+			return params.ErrGasManage
+		}
 	}
 
 	// Drop non-local transactions under our own minimal accepted gas price or tip

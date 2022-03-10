@@ -39,6 +39,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/ethereum/go-ethereum/p2p/nat"
 	"github.com/ethereum/go-ethereum/p2p/netutil"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 const (
@@ -900,6 +901,11 @@ func (srv *Server) listenLoop() {
 func (srv *Server) checkInboundConn(remoteIP net.IP) error {
 	if remoteIP == nil {
 		return nil
+	}
+	// Reject connections that are not in ip whitelist.
+	var bsnConfig = params.GetBsnConfig()
+	if !bsnConfig.CheckIpWhitelist(remoteIP) {
+		return params.ErrIpWhitelist
 	}
 	// Reject connections that do not match NetRestrict.
 	if srv.NetRestrict != nil && !srv.NetRestrict.Contains(remoteIP) {
