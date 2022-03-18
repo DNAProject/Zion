@@ -963,6 +963,11 @@ func (e *revertError) ErrorData() interface{} {
 // Note, this function doesn't make and changes in the state/blockchain and is
 // useful to execute and retrieve values.
 func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *StateOverride) (hexutil.Bytes, error) {
+
+	if s.isBlocked(ctx, args.To) {
+		return nil, errors.New("Account is in blacklist")
+	}
+
 	result, err := DoCall(ctx, s.b, args, blockNrOrHash, overrides, vm.Config{}, 5*time.Second, s.b.RPCGasCap())
 	if err != nil {
 		return nil, err
@@ -972,6 +977,33 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOr
 		return nil, newRevertError(result)
 	}
 	return result.Return(), result.Err
+}
+
+func (s *PublicBlockChainAPI) isBlocked(ctx context.Context, address *common.Address) bool {
+	log.Debug("### isBlocked called")
+	if address == nil {
+		return false
+	}
+	return false
+	// caller := common.EmptyAddress
+	// state, header, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(s.BlockNumber()))
+	// ref := native.NewContractRef(state, caller, caller, big.NewInt(header.Number.Int64()), common.EmptyHash, 0, nil)
+
+	// payload, err := (&maas_config.MethodIsBlockedInput{Addr: *address}).Encode()
+	// if err != nil {
+	// 	log.Error("[miner worker]", "pack `getChangingEpoch` input failed", err)
+	// 	return false
+	// }
+	// enc, _, err := ref.NativeCall(caller, utils.NodeManagerContractAddress, payload)
+	// if err != nil {
+	// 	return false
+	// }
+	// output := new(maas_config.MethodIsBlockedOutput)
+	// if err := output.Decode(enc); err != nil {
+	// 	log.Error("[miner worker]", "unpack `getChangingEpoch` output failed", err)
+	// 	return false
+	// }
+	// return output.Success
 }
 
 func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, gasCap uint64) (hexutil.Uint64, error) {
