@@ -62,7 +62,7 @@ func BlockAccount(s *native.NativeContract) ([]byte, error) {
 	// check authority
 	if err := contract.ValidateOwner(s, caller); err != nil {
 		log.Trace("blockAccount", "ValidateOwner failed", err)
-		return nil, errors.New("invalid authority")
+		return utils.ByteFailed, errors.New("invalid authority")
 	}
 
 	// decode input
@@ -75,7 +75,7 @@ func BlockAccount(s *native.NativeContract) ([]byte, error) {
 	// store blacklist
 	key := getBlacklistKey(input.Addr)
 	if input.DoBlock {
-		set(s, key, utils.BYTE_TRUE)
+		set(s, key, utils.ByteSuccess)
 	} else {
 		del(s, key)
 	}
@@ -86,7 +86,7 @@ func BlockAccount(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, errors.New("emitBlockAccount error")
 	}
 
-	log.Debug("BlockAccount", input.Addr, input.DoBlock)
+	log.Debug("BlockAccount: "+input.Addr.String(), input.DoBlock)
 	return utils.ByteSuccess, nil
 }
 
@@ -109,7 +109,9 @@ func IsBlocked(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, errors.New("invalid input")
 	}
 
-	// store blacklist
+	// get value
 	key := getBlacklistKey(input.Addr)
-	return get(s, key)
+	value, _ := get(s, key)
+	output := &MethodIsBlockedOutput{Success: len(value) > 0}
+	return output.Encode()
 }

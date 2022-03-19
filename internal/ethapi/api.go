@@ -36,6 +36,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -984,27 +985,45 @@ func (s *PublicBlockChainAPI) isBlocked(ctx context.Context, address *common.Add
 	if address == nil {
 		return false
 	}
-	return false
-	// caller := common.EmptyAddress
-	// state, header, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(s.BlockNumber()))
-	// ref := native.NewContractRef(state, caller, caller, big.NewInt(header.Number.Int64()), common.EmptyHash, 0, nil)
+	// return false
+	caller := common.EmptyAddress
+	state, header, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(s.BlockNumber()))
+	if err != nil {
+		log.Error("StateAndHeaderByNumber", "StateAndHeaderByNumber failed", err)
+		return false
+	}
+	ref := native.NewContractRef(state, caller, caller, big.NewInt(header.Number.Int64()), common.EmptyHash, 0, nil)
 
-	// payload, err := (&maas_config.MethodIsBlockedInput{Addr: *address}).Encode()
-	// if err != nil {
-	// 	log.Error("[miner worker]", "pack `getChangingEpoch` input failed", err)
-	// 	return false
-	// }
-	// enc, _, err := ref.NativeCall(caller, utils.NodeManagerContractAddress, payload)
-	// if err != nil {
-	// 	return false
-	// }
+	ab, err := abi.JSON(strings.NewReader(MaasConfigABI))
+	if err != nil {
+		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
+	}
+	ABI := &ab
+
+	payload, err := utils.PackMethod(ABI, "isBlocked", address) // (&maas_config.MethodIsBlockedInput{Addr: *address}).Encode()
+	if err != nil {
+		log.Error("[PackMethod]", "pack `isBlocked` input failed", err)
+		return false
+	}
+	enc, _, err := ref.NativeCall(caller, utils.MaasConfigContractAddress, payload)
+	if err != nil {
+		return false
+	}
+	var data struct {
+		Result bool
+	}
+	utils.UnpackOutputs(ABI, "isBlocked", data, enc)
+
 	// output := new(maas_config.MethodIsBlockedOutput)
 	// if err := output.Decode(enc); err != nil {
 	// 	log.Error("[miner worker]", "unpack `getChangingEpoch` output failed", err)
 	// 	return false
 	// }
-	// return output.Success
+	return data.Result
 }
+
+// MaasConfigABI is the input ABI used to generate the binding from.
+const MaasConfigABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"BlockAccount\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"blockAccount\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isBlocked\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, gasCap uint64) (hexutil.Uint64, error) {
 	// Binary search the gas requirement, as it may be higher than the amount used

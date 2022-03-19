@@ -65,8 +65,8 @@ func customGet(db *state.CacheDB, key []byte) ([]byte, error) {
 	value, err := db.Get(key)
 	if err != nil {
 		return nil, err
-	} else if value == nil || len(value) == 0 {
-		return nil, ErrEof
+		// } else if value == nil || len(value) == 0 {
+		// 	return nil, ErrEof
 	} else {
 		return value, nil
 	}

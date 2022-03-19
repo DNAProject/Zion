@@ -79,13 +79,13 @@ func (m *MethodBlockAccountInput) Encode() ([]byte, error) {
 
 func (m *MethodBlockAccountInput) Decode(payload []byte) error {
 	var data struct {
-		Addr    []byte
+		Addr    common.Address
 		DoBlock bool
 	}
 	if err := utils.UnpackMethod(ABI, MethodBlockAccount, &data, payload); err != nil {
 		return err
 	}
-	m.Addr = common.BytesToAddress(data.Addr)
+	m.Addr = data.Addr
 	m.DoBlock = data.DoBlock
 	return nil
 }
@@ -107,17 +107,17 @@ type MethodIsBlockedInput struct {
 }
 
 func (m *MethodIsBlockedInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodIsBlocked, m.Addr.Bytes())
+	return utils.PackMethod(ABI, MethodIsBlocked, m.Addr)
 }
 
 func (m *MethodIsBlockedInput) Decode(payload []byte) error {
 	var data struct {
-		Addr []byte
+		Addr common.Address
 	}
 	if err := utils.UnpackMethod(ABI, MethodIsBlocked, &data, payload); err != nil {
 		return err
 	}
-	m.Addr = common.BytesToAddress(data.Addr)
+	m.Addr = data.Addr
 	return nil
 }
 
