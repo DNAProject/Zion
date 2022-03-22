@@ -36,7 +36,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/native_client"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -882,6 +882,11 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	if state == nil || err != nil {
 		return nil, err
 	}
+	// check if address is blocked
+	if native_client.IsBlocked(state, args.From) || native_client.IsBlocked(state, args.To) {
+		return nil, native_client.ErrAccountBlocked
+	}
+
 	if err := overrides.Apply(state); err != nil {
 		return nil, err
 	}
@@ -964,11 +969,6 @@ func (e *revertError) ErrorData() interface{} {
 // Note, this function doesn't make and changes in the state/blockchain and is
 // useful to execute and retrieve values.
 func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *StateOverride) (hexutil.Bytes, error) {
-
-	if s.isBlocked(ctx, args.To) {
-		return nil, errors.New("Account is in blacklist")
-	}
-
 	result, err := DoCall(ctx, s.b, args, blockNrOrHash, overrides, vm.Config{}, 5*time.Second, s.b.RPCGasCap())
 	if err != nil {
 		return nil, err
@@ -979,51 +979,6 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOr
 	}
 	return result.Return(), result.Err
 }
-
-func (s *PublicBlockChainAPI) isBlocked(ctx context.Context, address *common.Address) bool {
-	log.Debug("### isBlocked called")
-	if address == nil {
-		return false
-	}
-	// return false
-	caller := common.EmptyAddress
-	state, header, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(s.BlockNumber()))
-	if err != nil {
-		log.Error("StateAndHeaderByNumber", "StateAndHeaderByNumber failed", err)
-		return false
-	}
-	ref := native.NewContractRef(state, caller, caller, big.NewInt(header.Number.Int64()), common.EmptyHash, 0, nil)
-
-	ab, err := abi.JSON(strings.NewReader(MaasConfigABI))
-	if err != nil {
-		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
-	}
-	ABI := &ab
-
-	payload, err := utils.PackMethod(ABI, "isBlocked", address) // (&maas_config.MethodIsBlockedInput{Addr: *address}).Encode()
-	if err != nil {
-		log.Error("[PackMethod]", "pack `isBlocked` input failed", err)
-		return false
-	}
-	enc, _, err := ref.NativeCall(caller, utils.MaasConfigContractAddress, payload)
-	if err != nil {
-		return false
-	}
-	var data struct {
-		Result bool
-	}
-	utils.UnpackOutputs(ABI, "isBlocked", data, enc)
-
-	// output := new(maas_config.MethodIsBlockedOutput)
-	// if err := output.Decode(enc); err != nil {
-	// 	log.Error("[miner worker]", "unpack `getChangingEpoch` output failed", err)
-	// 	return false
-	// }
-	return data.Result
-}
-
-// MaasConfigABI is the input ABI used to generate the binding from.
-const MaasConfigABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"BlockAccount\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"blockAccount\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isBlocked\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, gasCap uint64) (hexutil.Uint64, error) {
 	// Binary search the gas requirement, as it may be higher than the amount used
@@ -1817,6 +1772,16 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
 func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+	// get state
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if state == nil || err != nil {
+		return common.Hash{}, err
+	}
+	// check if address is blocked
+	if native_client.IsBlocked(state, &args.From) || native_client.IsBlocked(state, args.To) {
+		return common.Hash{}, native_client.ErrAccountBlocked
+	}
+
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: args.From}
 
@@ -1869,6 +1834,17 @@ func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, input
 	if err := tx.UnmarshalBinary(input); err != nil {
 		return common.Hash{}, err
 	}
+	// get state
+	from, _ := types.Sender(s.signer, tx)
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if state == nil || err != nil {
+		return common.Hash{}, err
+	}
+	// check if address is blocked
+	if native_client.IsBlocked(state, &from) || native_client.IsBlocked(state, tx.To()) {
+		return common.Hash{}, native_client.ErrAccountBlocked
+	}
+
 	return SubmitTransaction(ctx, s.b, tx)
 }
 

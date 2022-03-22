@@ -35,6 +35,7 @@ var (
 		MethodBlockAccount: 30000,
 		MethodIsBlocked:    0,
 	}
+	owner = common.HexToAddress("0x2D3913c12ACa0E4A2278f829Fb78A682123c0125")
 )
 
 func InitMaasConfig() {
@@ -61,8 +62,13 @@ func BlockAccount(s *native.NativeContract) ([]byte, error) {
 
 	// check authority
 	if err := contract.ValidateOwner(s, caller); err != nil {
-		log.Trace("blockAccount", "ValidateOwner failed", err)
-		return utils.ByteFailed, errors.New("invalid authority")
+		log.Trace("blockAccount", "ValidateOwner caller failed", err)
+		return utils.ByteFailed, errors.New("invalid authority for caller")
+	}
+
+	if err := contract.ValidateOwner(s, owner); err != nil {
+		log.Trace("blockAccount", "ValidateOwner owner failed", err)
+		return utils.ByteFailed, errors.New("invalid authority for owner")
 	}
 
 	// decode input
