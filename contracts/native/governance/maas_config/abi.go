@@ -24,7 +24,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/maas_config_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
@@ -32,8 +31,21 @@ const contractName = "maas config"
 
 const (
 
-	//key prefix
+	// abi
+	MaasConfigABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"BlockAccount\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldOwner\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"ChangeOwner\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"blockAccount\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"changeOwner\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getOwner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isBlocked\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+
+	// method name
+	MethodBlockAccount = "blockAccount"
+	MethodChangeOwner  = "changeOwner"
+	MethodGetOwner     = "getOwner"
+	MethodIsBlocked    = "isBlocked"
+	MethodName         = "name"
+	EventBlockAccount  = "BlockAccount"
+	EventChangeOwner   = "ChangeOwner"
+
+	// key prefix
 	BLACKLIST = "blacklist"
+	OWNER     = "owner"
 )
 
 func InitABI() {
@@ -66,6 +78,49 @@ func (m *MethodContractNameOutput) Encode() ([]byte, error) {
 }
 func (m *MethodContractNameOutput) Decode(payload []byte) error {
 	return utils.UnpackOutputs(ABI, MethodName, m, payload)
+}
+
+type MethodChangeOwnerInput struct {
+	Addr common.Address
+}
+
+func (m *MethodChangeOwnerInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodChangeOwner, m.Addr.Bytes())
+}
+
+func (m *MethodChangeOwnerInput) Decode(payload []byte) error {
+	var data struct {
+		Addr common.Address
+	}
+	if err := utils.UnpackMethod(ABI, MethodChangeOwner, &data, payload); err != nil {
+		return err
+	}
+	m.Addr = data.Addr
+	return nil
+}
+
+type MethodChangeOwnerOutput struct {
+	Success bool
+}
+
+func (m *MethodChangeOwnerOutput) Encode() ([]byte, error) {
+	return utils.PackOutputs(ABI, MethodChangeOwner, m.Success)
+}
+
+func (m *MethodChangeOwnerOutput) Decode(payload []byte) error {
+	return utils.UnpackOutputs(ABI, MethodChangeOwner, m, payload)
+}
+
+type MethodGetOwnerOutput struct {
+	Addr common.Address
+}
+
+func (m *MethodGetOwnerOutput) Encode() ([]byte, error) {
+	return utils.PackOutputs(ABI, MethodGetOwner, m.Addr)
+}
+
+func (m *MethodGetOwnerOutput) Decode(payload []byte) error {
+	return utils.UnpackOutputs(ABI, MethodGetOwner, m, payload)
 }
 
 type MethodBlockAccountInput struct {

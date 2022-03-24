@@ -18,22 +18,16 @@ package native_client
 
 import (
 	"errors"
-	"fmt"
 	"math/big"
 	"strconv"
-	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/maas_config"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/log"
 )
-
-// MaasConfigABI is the ABI used to call native contract maasConfig
-const MaasConfigABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"BlockAccount\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"blockAccount\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isBlocked\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
-const MethodIsBlocked = "isBlocked"
 
 var ErrAccountBlocked = errors.New("account is in blacklist")
 
@@ -45,13 +39,7 @@ func IsBlocked(state *state.StateDB, address *common.Address) bool {
 	caller := common.EmptyAddress
 	ref := native.NewContractRef(state, caller, caller, big.NewInt(-1), common.EmptyHash, 0, nil)
 
-	ab, err := abi.JSON(strings.NewReader(MaasConfigABI))
-	if err != nil {
-		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
-	}
-	ABI := &ab
-
-	payload, err := utils.PackMethod(ABI, MethodIsBlocked, address) // (&maas_config.MethodIsBlockedInput{Addr: *address}).Encode()
+	payload, err := (&maas_config.MethodIsBlockedInput{Addr: *address}).Encode()
 	if err != nil {
 		log.Error("[PackMethod]", "pack `isBlocked` input failed", err)
 		return false
@@ -60,11 +48,12 @@ func IsBlocked(state *state.StateDB, address *common.Address) bool {
 	if err != nil {
 		return false
 	}
-	var data struct {
-		Result bool
+	output := new(maas_config.MethodIsBlockedOutput)
+	if err := output.Decode(enc); err != nil {
+		log.Error("[native call]", "unpack `IsBlocked` output failed", err)
+		return false
 	}
-	utils.UnpackOutputs(ABI, MethodIsBlocked, &data, enc)
 
-	log.Debug("IsBlocked: " + address.String() + ", " + strconv.FormatBool(data.Result))
-	return data.Result
+	log.Debug("IsBlocked: " + address.String() + ", " + strconv.FormatBool(output.Success))
+	return output.Success
 }

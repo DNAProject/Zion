@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/contract"
-	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/maas_config_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -32,9 +31,12 @@ import (
 var (
 	gasTable = map[string]uint64{
 		MethodName:         0,
+		MethodChangeOwner:  30000,
+		MethodGetOwner:     0,
 		MethodBlockAccount: 30000,
 		MethodIsBlocked:    0,
 	}
+	// initial owner
 	owner = common.HexToAddress("0x2D3913c12ACa0E4A2278f829Fb78A682123c0125")
 )
 
@@ -47,12 +49,68 @@ func RegisterMaasConfigContract(s *native.NativeContract) {
 	s.Prepare(ABI, gasTable)
 
 	s.Register(MethodName, Name)
+	s.Register(MethodChangeOwner, ChangeOwner)
+	s.Register(MethodGetOwner, GetOwner)
 	s.Register(MethodBlockAccount, BlockAccount)
 	s.Register(MethodIsBlocked, IsBlocked)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
 	return new(MethodContractNameOutput).Encode()
+}
+
+// change owner
+func ChangeOwner(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+	caller := ctx.Caller
+
+	// check authority
+	if err := contract.ValidateOwner(s, caller); err != nil {
+		log.Trace("blockAccount", "ValidateOwner caller failed", err)
+		return utils.ByteFailed, errors.New("invalid authority for caller")
+	}
+
+	currentOwner := getOwner(s)
+	if err := contract.ValidateOwner(s, currentOwner); err != nil {
+		log.Trace("blockAccount", "ValidateOwner owner failed", err)
+		return utils.ByteFailed, errors.New("invalid authority for owner")
+	}
+
+	// decode input
+	input := new(MethodChangeOwnerInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		log.Trace("ChangeOwner", "decode input failed", err)
+		return utils.ByteFailed, errors.New("invalid input")
+	}
+
+	// store blacklist
+	key := getOwnerKey()
+	set(s, key, input.Addr.Bytes())
+
+	// emit event log
+	if err := s.AddNotify(ABI, []string{EventChangeOwner}, currentOwner, input.Addr); err != nil {
+		log.Trace("propose", "emit event log failed", err)
+		return utils.ByteFailed, errors.New("emit EventChangeOwner error")
+	}
+
+	log.Debug("ChangeOwner: " + input.Addr.String())
+	return utils.ByteSuccess, nil
+}
+
+// get owner
+func GetOwner(s *native.NativeContract) ([]byte, error) {
+	output := &MethodGetOwnerOutput{Addr: getOwner(s)}
+	return output.Encode()
+}
+
+func getOwner(s *native.NativeContract) common.Address {
+	// get value
+	key := getOwnerKey()
+	value, _ := get(s, key)
+	if len(value) == 0 {
+		return owner
+	}
+	return common.BytesToAddress(value)
 }
 
 // block account(add account to blacklist map) or unblock account
@@ -66,7 +124,8 @@ func BlockAccount(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, errors.New("invalid authority for caller")
 	}
 
-	if err := contract.ValidateOwner(s, owner); err != nil {
+	currentOwner := getOwner(s)
+	if err := contract.ValidateOwner(s, currentOwner); err != nil {
 		log.Trace("blockAccount", "ValidateOwner owner failed", err)
 		return utils.ByteFailed, errors.New("invalid authority for owner")
 	}
@@ -87,7 +146,7 @@ func BlockAccount(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// emit event log
-	if err := emitBlockAccount(s, input.Addr, input.DoBlock); err != nil {
+	if err := s.AddNotify(ABI, []string{EventBlockAccount}, input.Addr, input.DoBlock); err != nil {
 		log.Trace("propose", "emit event log failed", err)
 		return utils.ByteFailed, errors.New("emitBlockAccount error")
 	}
@@ -100,11 +159,11 @@ func getBlacklistKey(addr common.Address) []byte {
 	return utils.ConcatKey(this, []byte(BLACKLIST), addr.Bytes())
 }
 
-func emitBlockAccount(s *native.NativeContract, addr common.Address, doBlock bool) error {
-	return s.AddNotify(ABI, []string{EventBlockAccount}, addr, doBlock)
+func getOwnerKey() []byte {
+	return utils.ConcatKey(this, []byte(OWNER))
 }
 
-// block account(add account to blacklist map) or unblock account
+// check if account is blocked
 func IsBlocked(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 

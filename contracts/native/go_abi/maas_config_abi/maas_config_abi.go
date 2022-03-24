@@ -29,15 +29,21 @@ var (
 var (
 	MethodBlockAccount = "blockAccount"
 
+	MethodChangeOwner = "changeOwner"
+
+	MethodGetOwner = "getOwner"
+
 	MethodIsBlocked = "isBlocked"
 
 	MethodName = "name"
 
 	EventBlockAccount = "BlockAccount"
+
+	EventChangeOwner = "ChangeOwner"
 )
 
 // MaasConfigABI is the input ABI used to generate the binding from.
-const MaasConfigABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"BlockAccount\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"blockAccount\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isBlocked\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const MaasConfigABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"BlockAccount\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldOwner\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"ChangeOwner\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"blockAccount\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"changeOwner\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getOwner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isBlocked\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // MaasConfig is an auto generated Go binding around an Ethereum contract.
 type MaasConfig struct {
@@ -181,6 +187,37 @@ func (_MaasConfig *MaasConfigTransactorRaw) Transact(opts *bind.TransactOpts, me
 	return _MaasConfig.Contract.contract.Transact(opts, method, params...)
 }
 
+// GetOwner is a free data retrieval call binding the contract method 0x893d20e8.
+//
+// Solidity: function getOwner() view returns(address)
+func (_MaasConfig *MaasConfigCaller) GetOwner(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _MaasConfig.contract.Call(opts, &out, "getOwner")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// GetOwner is a free data retrieval call binding the contract method 0x893d20e8.
+//
+// Solidity: function getOwner() view returns(address)
+func (_MaasConfig *MaasConfigSession) GetOwner() (common.Address, error) {
+	return _MaasConfig.Contract.GetOwner(&_MaasConfig.CallOpts)
+}
+
+// GetOwner is a free data retrieval call binding the contract method 0x893d20e8.
+//
+// Solidity: function getOwner() view returns(address)
+func (_MaasConfig *MaasConfigCallerSession) GetOwner() (common.Address, error) {
+	return _MaasConfig.Contract.GetOwner(&_MaasConfig.CallOpts)
+}
+
 // IsBlocked is a free data retrieval call binding the contract method 0xfbac3951.
 //
 // Solidity: function isBlocked(address addr) view returns(bool)
@@ -262,6 +299,27 @@ func (_MaasConfig *MaasConfigSession) BlockAccount(addr common.Address, doBlock 
 // Solidity: function blockAccount(address addr, bool doBlock) returns(bool)
 func (_MaasConfig *MaasConfigTransactorSession) BlockAccount(addr common.Address, doBlock bool) (*types.Transaction, error) {
 	return _MaasConfig.Contract.BlockAccount(&_MaasConfig.TransactOpts, addr, doBlock)
+}
+
+// ChangeOwner is a paid mutator transaction binding the contract method 0xa6f9dae1.
+//
+// Solidity: function changeOwner(address addr) returns(bool)
+func (_MaasConfig *MaasConfigTransactor) ChangeOwner(opts *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
+	return _MaasConfig.contract.Transact(opts, "changeOwner", addr)
+}
+
+// ChangeOwner is a paid mutator transaction binding the contract method 0xa6f9dae1.
+//
+// Solidity: function changeOwner(address addr) returns(bool)
+func (_MaasConfig *MaasConfigSession) ChangeOwner(addr common.Address) (*types.Transaction, error) {
+	return _MaasConfig.Contract.ChangeOwner(&_MaasConfig.TransactOpts, addr)
+}
+
+// ChangeOwner is a paid mutator transaction binding the contract method 0xa6f9dae1.
+//
+// Solidity: function changeOwner(address addr) returns(bool)
+func (_MaasConfig *MaasConfigTransactorSession) ChangeOwner(addr common.Address) (*types.Transaction, error) {
+	return _MaasConfig.Contract.ChangeOwner(&_MaasConfig.TransactOpts, addr)
 }
 
 // MaasConfigBlockAccountIterator is returned from FilterBlockAccount and is used to iterate over the raw logs and unpacked data for BlockAccount events raised by the MaasConfig contract.
@@ -393,6 +451,141 @@ func (_MaasConfig *MaasConfigFilterer) WatchBlockAccount(opts *bind.WatchOpts, s
 func (_MaasConfig *MaasConfigFilterer) ParseBlockAccount(log types.Log) (*MaasConfigBlockAccount, error) {
 	event := new(MaasConfigBlockAccount)
 	if err := _MaasConfig.contract.UnpackLog(event, "BlockAccount", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// MaasConfigChangeOwnerIterator is returned from FilterChangeOwner and is used to iterate over the raw logs and unpacked data for ChangeOwner events raised by the MaasConfig contract.
+type MaasConfigChangeOwnerIterator struct {
+	Event *MaasConfigChangeOwner // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *MaasConfigChangeOwnerIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(MaasConfigChangeOwner)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(MaasConfigChangeOwner)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *MaasConfigChangeOwnerIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *MaasConfigChangeOwnerIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// MaasConfigChangeOwner represents a ChangeOwner event raised by the MaasConfig contract.
+type MaasConfigChangeOwner struct {
+	OldOwner common.Address
+	NewOwner common.Address
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterChangeOwner is a free log retrieval operation binding the contract event 0x9aecf86140d81442289f667eb72e1202a8fbb3478a686659952e145e85319656.
+//
+// Solidity: event ChangeOwner(address oldOwner, address newOwner)
+func (_MaasConfig *MaasConfigFilterer) FilterChangeOwner(opts *bind.FilterOpts) (*MaasConfigChangeOwnerIterator, error) {
+
+	logs, sub, err := _MaasConfig.contract.FilterLogs(opts, "ChangeOwner")
+	if err != nil {
+		return nil, err
+	}
+	return &MaasConfigChangeOwnerIterator{contract: _MaasConfig.contract, event: "ChangeOwner", logs: logs, sub: sub}, nil
+}
+
+// WatchChangeOwner is a free log subscription operation binding the contract event 0x9aecf86140d81442289f667eb72e1202a8fbb3478a686659952e145e85319656.
+//
+// Solidity: event ChangeOwner(address oldOwner, address newOwner)
+func (_MaasConfig *MaasConfigFilterer) WatchChangeOwner(opts *bind.WatchOpts, sink chan<- *MaasConfigChangeOwner) (event.Subscription, error) {
+
+	logs, sub, err := _MaasConfig.contract.WatchLogs(opts, "ChangeOwner")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(MaasConfigChangeOwner)
+				if err := _MaasConfig.contract.UnpackLog(event, "ChangeOwner", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseChangeOwner is a log parse operation binding the contract event 0x9aecf86140d81442289f667eb72e1202a8fbb3478a686659952e145e85319656.
+//
+// Solidity: event ChangeOwner(address oldOwner, address newOwner)
+func (_MaasConfig *MaasConfigFilterer) ParseChangeOwner(log types.Log) (*MaasConfigChangeOwner, error) {
+	event := new(MaasConfigChangeOwner)
+	if err := _MaasConfig.contract.UnpackLog(event, "ChangeOwner", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
