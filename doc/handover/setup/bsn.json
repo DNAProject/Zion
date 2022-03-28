@@ -1,0 +1,8 @@
+{
+    "ipWhitelistEnable":false,
+    "ipWhitelist":["127.0.0.1"],
+    "gasManageEnable":false,
+    "gasManageAccounts":["0x2D3913c12ACa0E4A2278f829Fb78A682123c0125"],
+    "blacklistEnable":false,
+    "blacklist":["0x258af48e28E4A6846E931dDfF8e1Cdf8579821e5"]
+}

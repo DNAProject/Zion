@@ -6,17 +6,24 @@ ubuntu 16或18
 centOS 7
 golang版本1.14及以上，同时需要C编译器
 
-## 1.2. 下载代码
+## 1.2. 目录结构
 
-repo地址：https://github.com/DNAProject/Zion
++ src.zip 源代码压缩包
++ setup 
+    - node0 - node6 7节点的私钥和公钥文件
+    - genesis.json  创世区块配置
+    - static-node.json 静态节点通讯配置
+    - bsn.json      符合bsn监管需求的相关配置
++ geth 节点启动二进制文件
++ init.sh 创世区块初始化脚本
++ start.sh 节点启动脚本
++ stop.sh  节点停机脚本
 
-## 1.3. 编译
+## 1.4. 生成节点初始配置信息
 
-```
-make geth
-```
+解压src.zip, 进入src目录
 
-## 1.4. 运行代码目录中 ./consensus/hotstuff/tool/encoder_test.go 的TestGenerateAndEncode(), 修改节点数，生成所需配置，并记录拷贝
+运行代码目录中 ./consensus/hotstuff/tool/encoder_test.go 的TestGenerateAndEncode(), 修改节点数，生成所需配置，并记录拷贝
 
 ```
 cd /projecthome/consensus/hotstuff/tool
@@ -47,7 +54,7 @@ go test -v -run TestGenerateAndEncode
         ]
 ```
 
-## 1.5. 从安装包中拷贝setup(node i(1-7)目录， genesis.json， static-nodes.json), init.sh, start.sh, stop.sh, geth二进制文件到链的安装目录根目录下
+## 1.5. 从安装包中拷贝setup文件夹, init.sh, start.sh, stop.sh, geth二进制文件到链的安装目录根目录下
 
 ```
 cp setup /to/your/installpath
@@ -61,37 +68,27 @@ cp stop.sh /to/your/installpath
 ```
 cd setup
 ```
-顺序修改node0-node7中的nodekey和pubkey，将data.inf中的nodeKey和pubKey按顺序填入七节点
+顺序修改node0-node6中的nodekey和pubkey，将data.inf中的nodeKey和pubKey按顺序填入七节点
 其中nodeKey的填入要删除0x前缀
 
-## 1.7. 修改genesis.json和static-nodes.json,替换chainId，alloc，extraData，和ecode url
+## 1.7. 配置genesis.json和static-nodes.json,替换chainId，alloc，extraData，和ecode url
 
 ```
 vim setup/genesis.json
 ```
 
 将alloc的每行的key替换成data.inf的address，publicKey的内容替换成data.inf的pubKey
-将extraData的内容替换成data.inf的genesis extra 
+将extraData的内容替换成data.inf的genesis extra
 如果需要修改chainId，则可以将自定义chainId填入
-
 
 ```
 vim setup/static-nodes.json
 ```
 将data.inf的encode url信息替换到文件中，注意要根据机器节点情况修改对应ip和port
 
-## 1.8. 执行init.sh
+## 配置bsn.json
 
-按顺序执行7遍init.sh, 在console的交互中输入0-6的节点号
-
-## 1.9. 修改start.sh
-
-修改start.sh的coinbase，填入七个节点的私钥地址
-如果修改了genesis.json文件的chainId的话，要修改启动参数的chainid
-
-## 1.9.1. 修改start.sh
-
-修改bsn.json配置文件
+按需修改bsn.json配置文件
 ```
 vim bsn.json
 ```
@@ -105,10 +102,15 @@ vim bsn.json
     "blacklist":["0x258af48e28E4A6846E931dDfF8e1Cdf8579821e5"] // 账户（合约）黑名单地址列表
 }
 ```
-修改start.sh中的bsn配置项，指定bsn.json文件路径
-```
---bsn \data\zion\bsn.json \
-```
+
+## 1.8. 执行init.sh
+
+按顺序执行7遍init.sh, 在console的交互中输入0-6的节点号
+
+## 1.9. 修改start.sh
+
+修改start.sh的coinbase，填入七个节点的私钥地址
+如果修改了genesis.json文件的chainId的话，要修改启动参数的chainid
 
 ## 1.10. 启动节点
 
