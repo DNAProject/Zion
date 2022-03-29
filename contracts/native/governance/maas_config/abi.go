@@ -32,12 +32,13 @@ const contractName = "maas config"
 const (
 
 	// abi
-	MaasConfigABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"BlockAccount\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldOwner\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"ChangeOwner\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"blockAccount\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"changeOwner\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getOwner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isBlocked\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+	MaasConfigABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"BlockAccount\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldOwner\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"ChangeOwner\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"blockAccount\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"changeOwner\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getBlacklist\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getOwner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isBlocked\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 	// method name
 	MethodBlockAccount = "blockAccount"
 	MethodChangeOwner  = "changeOwner"
 	MethodGetOwner     = "getOwner"
+	MethodGetBlacklist = "getBlacklist"
 	MethodIsBlocked    = "isBlocked"
 	MethodName         = "name"
 	EventBlockAccount  = "BlockAccount"
@@ -85,7 +86,7 @@ type MethodChangeOwnerInput struct {
 }
 
 func (m *MethodChangeOwnerInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodChangeOwner, m.Addr.Bytes())
+	return utils.PackMethod(ABI, MethodChangeOwner, m.Addr)
 }
 
 func (m *MethodChangeOwnerInput) Decode(payload []byte) error {
@@ -129,7 +130,7 @@ type MethodBlockAccountInput struct {
 }
 
 func (m *MethodBlockAccountInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodBlockAccount, m.Addr.Bytes(), m.DoBlock)
+	return utils.PackMethod(ABI, MethodBlockAccount, m.Addr, m.DoBlock)
 }
 
 func (m *MethodBlockAccountInput) Decode(payload []byte) error {
@@ -186,4 +187,16 @@ func (m *MethodIsBlockedOutput) Encode() ([]byte, error) {
 
 func (m *MethodIsBlockedOutput) Decode(payload []byte) error {
 	return utils.UnpackOutputs(ABI, MethodIsBlocked, m, payload)
+}
+
+type MethodGetBlacklistOutput struct {
+	Result string
+}
+
+func (m *MethodGetBlacklistOutput) Encode() ([]byte, error) {
+	return utils.PackOutputs(ABI, MethodGetBlacklist, m.Result)
+}
+
+func (m *MethodGetBlacklistOutput) Decode(payload []byte) error {
+	return utils.UnpackOutputs(ABI, MethodGetBlacklist, m, payload)
 }

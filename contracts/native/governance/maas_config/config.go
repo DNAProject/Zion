@@ -19,6 +19,7 @@
 package maas_config
 
 import (
+	"encoding/json"
 	"errors"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -35,6 +36,7 @@ var (
 		MethodGetOwner:     0,
 		MethodBlockAccount: 30000,
 		MethodIsBlocked:    0,
+		MethodGetBlacklist: 0,
 	}
 	// initial owner
 	owner = common.HexToAddress("0x2D3913c12ACa0E4A2278f829Fb78A682123c0125")
@@ -53,6 +55,7 @@ func RegisterMaasConfigContract(s *native.NativeContract) {
 	s.Register(MethodGetOwner, GetOwner)
 	s.Register(MethodBlockAccount, BlockAccount)
 	s.Register(MethodIsBlocked, IsBlocked)
+	s.Register(MethodGetBlacklist, GetBlacklist)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
@@ -137,13 +140,21 @@ func BlockAccount(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, errors.New("invalid input")
 	}
 
-	// store blacklist
-	key := getBlacklistKey(input.Addr)
+	key := blacklistKey()
+	m := getBlacklistMap(s)
 	if input.DoBlock {
-		set(s, key, utils.ByteSuccess)
+		m[input.Addr] = struct{}{}
 	} else {
-		del(s, key)
+		delete(m, input.Addr)
 	}
+
+	value, err := json.Marshal(m)
+	log.Debug("m json:" + string(value))
+	if err != nil {
+		log.Trace("blockAccount", "encode value failed", err)
+		return utils.ByteFailed, errors.New("encode value failed")
+	}
+	set(s, key, value)
 
 	// emit event log
 	if err := s.AddNotify(ABI, []string{EventBlockAccount}, input.Addr, input.DoBlock); err != nil {
@@ -155,8 +166,20 @@ func BlockAccount(s *native.NativeContract) ([]byte, error) {
 	return utils.ByteSuccess, nil
 }
 
-func getBlacklistKey(addr common.Address) []byte {
-	return utils.ConcatKey(this, []byte(BLACKLIST), addr.Bytes())
+func getBlacklistMap(s *native.NativeContract) map[common.Address]struct{} {
+	key := blacklistKey()
+	value, _ := get(s, key)
+	m := make(map[common.Address]struct{})
+	if len(value) > 0 {
+		if err := json.Unmarshal(value, &m); err != nil {
+			log.Trace("blockAccount", "decode value failed", err)
+		}
+	}
+	return m
+}
+
+func blacklistKey() []byte {
+	return utils.ConcatKey(this, []byte(BLACKLIST))
 }
 
 func getOwnerKey() []byte {
@@ -175,8 +198,22 @@ func IsBlocked(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// get value
-	key := getBlacklistKey(input.Addr)
-	value, _ := get(s, key)
-	output := &MethodIsBlockedOutput{Success: len(value) > 0}
+	m := getBlacklistMap(s)
+	_, ok := m[input.Addr]
+	output := &MethodIsBlockedOutput{Success: ok}
+
+	return output.Encode()
+}
+
+// get blacklist json
+func GetBlacklist(s *native.NativeContract) ([]byte, error) {
+	// get value
+	m := getBlacklistMap(s)
+	list := make([]common.Address, 0, len(m))
+	for key := range m {
+		list = append(list, key)
+	}
+	result, _ := json.Marshal(list)
+	output := &MethodGetBlacklistOutput{Result: string(result)}
 	return output.Encode()
 }
