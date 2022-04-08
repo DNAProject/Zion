@@ -38,8 +38,6 @@ var (
 		MethodIsBlocked:    0,
 		MethodGetBlacklist: 0,
 	}
-	// initial owner
-	owner = common.HexToAddress("0x2D3913c12ACa0E4A2278f829Fb78A682123c0125")
 )
 
 func InitMaasConfig() {
@@ -74,9 +72,11 @@ func ChangeOwner(s *native.NativeContract) ([]byte, error) {
 	}
 
 	currentOwner := getOwner(s)
-	if err := contract.ValidateOwner(s, currentOwner); err != nil {
-		log.Trace("blockAccount", "ValidateOwner owner failed", err)
-		return utils.ByteFailed, errors.New("invalid authority for owner")
+	if currentOwner != common.EmptyAddress {
+		if err := contract.ValidateOwner(s, currentOwner); err != nil {
+			log.Trace("blockAccount", "ValidateOwner owner failed", err)
+			return utils.ByteFailed, errors.New("invalid authority for owner")
+		}
 	}
 
 	// decode input
@@ -111,7 +111,7 @@ func getOwner(s *native.NativeContract) common.Address {
 	key := getOwnerKey()
 	value, _ := get(s, key)
 	if len(value) == 0 {
-		return owner
+		return common.EmptyAddress
 	}
 	return common.BytesToAddress(value)
 }
