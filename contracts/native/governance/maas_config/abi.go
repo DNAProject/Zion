@@ -109,8 +109,20 @@ func (m *MethodChangeOwnerOutput) Encode() ([]byte, error) {
 }
 
 func (m *MethodChangeOwnerOutput) Decode(payload []byte) error {
-	return utils.UnpackOutputs(ABI, MethodChangeOwner, m, payload)
+	return utils.UnpackMethod(ABI, MethodChangeOwner, m, payload)
 }
+
+type MethodGetOwnerInput struct {
+}
+
+func (m *MethodGetOwnerInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetOwner)
+}
+
+func (m *MethodGetOwnerInput) Decode(payload []byte) error {
+	return utils.UnpackOutputs(ABI, MethodGetOwner, m, payload)
+}
+
 
 type MethodGetOwnerOutput struct {
 	Addr common.Address
@@ -187,6 +199,18 @@ func (m *MethodIsBlockedOutput) Encode() ([]byte, error) {
 
 func (m *MethodIsBlockedOutput) Decode(payload []byte) error {
 	return utils.UnpackOutputs(ABI, MethodIsBlocked, m, payload)
+}
+
+type MethodGetBlacklistInput struct {
+
+}
+
+func (m *MethodGetBlacklistInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetBlacklist)
+}
+
+func (m *MethodGetBlacklistInput) Decode(payload []byte) error {
+	return utils.UnpackMethod(ABI, MethodGetBlacklist, m, payload)
 }
 
 type MethodGetBlacklistOutput struct {
