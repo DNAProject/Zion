@@ -120,7 +120,7 @@ func (m *MethodGetOwnerInput) Encode() ([]byte, error) {
 }
 
 func (m *MethodGetOwnerInput) Decode(payload []byte) error {
-	return utils.UnpackOutputs(ABI, MethodGetOwner, m, payload)
+	return utils.UnpackMethod(ABI, MethodGetOwner, m, payload)
 }
 
 

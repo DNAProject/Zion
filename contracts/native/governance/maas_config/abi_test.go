@@ -71,6 +71,20 @@ func TestABIMethodChangeOwnerOutput(t *testing.T) {
 	}
 }
 
+
+func TestABIMethodGetOwnerInput(t *testing.T) {
+	expect := &MethodGetOwnerInput{}
+	enc, err := expect.Encode()
+	assert.NoError(t, err)
+	methodId := hexutil.Encode(crypto.Keccak256([]byte("getOwner()"))[:4])
+	t.Log(methodId)
+	t.Log(hexutil.Encode(enc)[:10])
+	assert.Equal(t, methodId, hexutil.Encode(enc)[:10])
+	got := new(MethodGetOwnerInput)
+	assert.NoError(t, got.Decode(enc))
+	assert.Equal(t, expect, got)
+}
+
 func TestABIMethodGetOwnerOutput(t *testing.T) {
 	var cases = []struct {
 		Addr common.Address
@@ -180,11 +194,23 @@ func TestMethodIsBlockedOutput(t *testing.T) {
 	}
 }
 
+func TestMethodGetBlacklistInput(t *testing.T) {
+	expect := &MethodGetBlacklistInput{}
+	enc, err := expect.Encode()
+	assert.NoError(t, err)
+	methodId := hexutil.Encode(crypto.Keccak256([]byte("getBlacklist()"))[:4])
+	t.Log(methodId)
+	t.Log(hexutil.Encode(enc)[:10])
+	assert.Equal(t, methodId, hexutil.Encode(enc)[:10])
+	got := new(MethodGetBlacklistInput)
+	assert.NoError(t, got.Decode(enc))
+	assert.Equal(t, expect, got)
+}
+
 func TestMethodGetBlacklistOutput(t *testing.T) {
-	// ToDo: add some test case results
 	var cases = []struct{Result string} {
-		{""},
-		{""},
+		{"Success"},
+		{"Fail"},
 	}
 
 	for _, testCase := range cases {
