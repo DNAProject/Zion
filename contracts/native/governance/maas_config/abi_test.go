@@ -14,6 +14,7 @@ func TestABIShowJonString(t *testing.T) {
 	for name, v := range ABI.Methods {
 		t.Logf("method %s, id %s", name, hexutil.Encode(v.ID))
 	}
+	t.Log("\n")
 }
 
 var testAddresses = []common.Address{
@@ -38,8 +39,8 @@ func TestABIMethodChangeOwnerInput(t *testing.T) {
 	enc, err := expect.Encode()
 	assert.NoError(t, err)
 	methodId := hexutil.Encode(crypto.Keccak256([]byte("changeOwner(address)"))[:4])
-	t.Log(methodId)
-	t.Log(hexutil.Encode(enc)[:10])
+	t.Log("expected methodId of changeOwner ", methodId)
+	t.Log("actual methodId of changedOwner ", hexutil.Encode(enc)[:10])
 	assert.Equal(t, methodId, hexutil.Encode(enc)[:10])
 	got := new(MethodChangeOwnerInput)
 	assert.NoError(t, got.Decode(enc))
@@ -72,19 +73,6 @@ func TestABIMethodChangeOwnerOutput(t *testing.T) {
 }
 
 
-func TestABIMethodGetOwnerInput(t *testing.T) {
-	expect := &MethodGetOwnerInput{}
-	enc, err := expect.Encode()
-	assert.NoError(t, err)
-	methodId := hexutil.Encode(crypto.Keccak256([]byte("getOwner()"))[:4])
-	t.Log(methodId)
-	t.Log(hexutil.Encode(enc)[:10])
-	assert.Equal(t, methodId, hexutil.Encode(enc)[:10])
-	got := new(MethodGetOwnerInput)
-	assert.NoError(t, got.Decode(enc))
-	assert.Equal(t, expect, got)
-}
-
 func TestABIMethodGetOwnerOutput(t *testing.T) {
 	var cases = []struct {
 		Addr common.Address
@@ -101,7 +89,7 @@ func TestABIMethodGetOwnerOutput(t *testing.T) {
 		output := &MethodGetOwnerOutput{Addr: testCase.Addr}
 		enc, err := output.Encode()
 		assert.NoError(t, err)
-		t.Log(output.Addr)
+
 		got := new(MethodGetOwnerOutput)
 		err = got.Decode(enc)
 		assert.NoError(t, err)
@@ -129,6 +117,13 @@ func TestMethodBlockAccountInput(t *testing.T) {
 		output := &MethodBlockAccountInput{Addr: testCase.Addr, DoBlock: testCase.DoBlock}
 		enc, err := output.Encode()
 		assert.NoError(t, err)
+
+		methodId := hexutil.Encode(crypto.Keccak256([]byte("blockAccount(address,bool)"))[:4])
+		t.Log("expected methodId of blockAccount ", methodId)
+		t.Log("actual methodId of blockAccount ", hexutil.Encode(enc)[:10])
+		t.Log("\n")
+
+		assert.Equal(t, methodId, hexutil.Encode(enc)[:10])
 
 		got := new(MethodBlockAccountInput)
 		err = got.Decode(enc)
@@ -169,6 +164,11 @@ func TestMethodIsBlockedInput(t *testing.T) {
 		enc, err := output.Encode()
 		assert.NoError(t, err)
 
+		methodId := hexutil.Encode(crypto.Keccak256([]byte("isBlocked(address)"))[:4])
+		t.Log("expected methodId of isBlocked ", methodId)
+		t.Log("actual methodId of isBlocked ", hexutil.Encode(enc)[:10])
+		t.Log("\n")
+
 		got := new(MethodIsBlockedInput)
 		err = got.Decode(enc)
 		assert.NoError(t, err)
@@ -194,19 +194,6 @@ func TestMethodIsBlockedOutput(t *testing.T) {
 	}
 }
 
-func TestMethodGetBlacklistInput(t *testing.T) {
-	expect := &MethodGetBlacklistInput{}
-	enc, err := expect.Encode()
-	assert.NoError(t, err)
-	methodId := hexutil.Encode(crypto.Keccak256([]byte("getBlacklist()"))[:4])
-	t.Log(methodId)
-	t.Log(hexutil.Encode(enc)[:10])
-	assert.Equal(t, methodId, hexutil.Encode(enc)[:10])
-	got := new(MethodGetBlacklistInput)
-	assert.NoError(t, got.Decode(enc))
-	assert.Equal(t, expect, got)
-}
-
 func TestMethodGetBlacklistOutput(t *testing.T) {
 	var cases = []struct{Result string} {
 		{"Success"},
@@ -223,4 +210,17 @@ func TestMethodGetBlacklistOutput(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, got, output)
 	}
+}
+
+func TestAllAbi(t *testing.T){
+	TestABIShowJonString(t)
+	TestABIMethodContractName(t)
+	TestABIMethodChangeOwnerInput(t)
+	TestABIMethodChangeOwnerOutput(t)
+	TestABIMethodGetOwnerOutput(t)
+	TestMethodBlockAccountInput(t)
+	TestMethodBlockAccountOutput(t)
+	TestMethodIsBlockedInput(t)
+	TestMethodIsBlockedOutput(t)
+	TestMethodGetBlacklistOutput(t)
 }

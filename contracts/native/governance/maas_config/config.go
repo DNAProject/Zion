@@ -20,6 +20,8 @@ package maas_config
 
 import (
 	"encoding/json"
+	"errors"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/contract"
@@ -66,14 +68,14 @@ func ChangeOwner(s *native.NativeContract) ([]byte, error) {
 	// check authority
 	if err := contract.ValidateOwner(s, caller); err != nil {
 		log.Trace("blockAccount", "ValidateOwner caller failed", err)
-		return utils.ByteFailed, ErrInvalidAuthorityForCaller
+		return utils.ByteFailed, errors.New("invalid authority for caller")
 	}
 
 	currentOwner := getOwner(s)
 	if currentOwner != common.EmptyAddress {
 		if err := contract.ValidateOwner(s, currentOwner); err != nil {
 			log.Trace("blockAccount", "ValidateOwner owner failed", err)
-			return utils.ByteFailed, ErrInvalidAuthorityForOwner
+			return utils.ByteFailed, errors.New("invalid authority for owner")
 		}
 	}
 
@@ -81,7 +83,7 @@ func ChangeOwner(s *native.NativeContract) ([]byte, error) {
 	input := new(MethodChangeOwnerInput)
 	if err := input.Decode(ctx.Payload); err != nil {
 		log.Trace("ChangeOwner", "decode input failed", err)
-		return utils.ByteFailed, ErrInvalidInput
+		return utils.ByteFailed, errors.New("invalid input")
 	}
 
 	// store blacklist
@@ -91,7 +93,7 @@ func ChangeOwner(s *native.NativeContract) ([]byte, error) {
 	// emit event log
 	if err := s.AddNotify(ABI, []string{EventChangeOwner}, currentOwner, input.Addr); err != nil {
 		log.Trace("propose", "emit event log failed", err)
-		return utils.ByteFailed, ErrEmitEventChangeOwner
+		return utils.ByteFailed, errors.New("emit EventChangeOwner error")
 	}
 
 	log.Debug("ChangeOwner: " + input.Addr.String())
@@ -122,20 +124,20 @@ func BlockAccount(s *native.NativeContract) ([]byte, error) {
 	// check authority
 	if err := contract.ValidateOwner(s, caller); err != nil {
 		log.Trace("blockAccount", "ValidateOwner caller failed", err)
-		return utils.ByteFailed, ErrInvalidAuthorityForCaller
+		return utils.ByteFailed, errors.New("invalid authority for caller")
 	}
 
 	currentOwner := getOwner(s)
 	if err := contract.ValidateOwner(s, currentOwner); err != nil {
 		log.Trace("blockAccount", "ValidateOwner owner failed", err)
-		return utils.ByteFailed, ErrInvalidAuthorityForOwner
+		return utils.ByteFailed, errors.New("invalid authority for owner")
 	}
 
 	// decode input
 	input := new(MethodBlockAccountInput)
 	if err := input.Decode(ctx.Payload); err != nil {
 		log.Trace("blockAccount", "decode input failed", err)
-		return utils.ByteFailed, ErrInvalidInput
+		return utils.ByteFailed, errors.New("invalid input")
 	}
 
 	key := blacklistKey()
@@ -150,14 +152,14 @@ func BlockAccount(s *native.NativeContract) ([]byte, error) {
 	log.Debug("m json:" + string(value))
 	if err != nil {
 		log.Trace("blockAccount", "encode value failed", err)
-		return utils.ByteFailed, ErrEncodeValueFailed
+		return utils.ByteFailed, errors.New("encode value failed")
 	}
 	set(s, key, value)
 
 	// emit event log
 	if err := s.AddNotify(ABI, []string{EventBlockAccount}, input.Addr, input.DoBlock); err != nil {
 		log.Trace("propose", "emit event log failed", err)
-		return utils.ByteFailed, ErrEmitBlockAccount
+		return utils.ByteFailed, errors.New("emitBlockAccount error")
 	}
 
 	log.Debug("BlockAccount: "+input.Addr.String(), input.DoBlock)
@@ -192,7 +194,7 @@ func IsBlocked(s *native.NativeContract) ([]byte, error) {
 	input := new(MethodIsBlockedInput)
 	if err := input.Decode(ctx.Payload); err != nil {
 		log.Trace("IsBlocked", "decode input failed", err)
-		return utils.ByteFailed, ErrInvalidInput
+		return utils.ByteFailed, errors.New("invalid input")
 	}
 
 	// get value

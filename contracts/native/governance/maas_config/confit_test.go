@@ -3,10 +3,11 @@ package maas_config
 import (
 	"crypto/rand"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/stretchr/testify/assert"
@@ -71,8 +72,7 @@ func TestChangeAndGetOwner(t *testing.T) {
 		},
 		{
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				input := &MethodGetOwnerInput{}
-				payload, err := input.Encode()
+				payload, err := utils.PackMethod(ABI, MethodGetOwner)
 				assert.NoError(t, err)
 				c.Payload = payload
 			},
@@ -92,11 +92,11 @@ func TestChangeAndGetOwner(t *testing.T) {
 		if k == 0 {
 			res, err := strconv.ParseBool(string(result))
 			assert.NoError(t, err)
-			t.Log("change owner result", res)
+			t.Log("changeOwner result: ", res)
 			assert.Equal(t, v.ReturnData, res)
 		}
 		if k == 1 {
-			t.Log(hexutil.Encode(result))
+			t.Log("getOwner result: ", hexutil.Encode(result))
 			assert.Equal(t, common.HexToAddress(common.Bytes2Hex(result)), testAddresses[0])
 		}
 		if v.AfterHandler != nil {
@@ -135,7 +135,7 @@ func TestMethodBlockAccount(t *testing.T) {
 				c.Payload, _ = input.Encode()
 			},
 			ReturnData: []byte{'0'},
-			Expect: ErrInvalidAuthorityForOwner,
+			Expect: errors.New("invalid authority for owner"),
 		},
 		{
 			BlockNum:    3,
@@ -178,7 +178,7 @@ func TestMethodBlockAccount(t *testing.T) {
 		}
 		result, _, err := ctx.ContractRef().NativeCall(testCaller, this, v.Payload)
 		assert.Equal(t, v.Expect, err)
-		t.Log(string(result))
+		t.Log("blockAccount result: ", string(result))
 		assert.Equal(t, v.ReturnData, result)
 		if v.AfterHandler != nil {
 			v.AfterHandler(v, ctx)
@@ -190,10 +190,9 @@ func blockTestAccount(ctx *native.NativeContract) {
 	input := &MethodBlockAccountInput{Addr: testAddresses[3], DoBlock: true}
 	payload, _ := input.Encode()
 	result, _, err := ctx.ContractRef().NativeCall(testCaller, this, payload)
-	if err != nil{
-		panic(err)
+	if err != nil || result[0] != utils.ByteSuccess[0] {
+		panic("blockTestAccount err: "+err.Error())
 	}
-	fmt.Printf("blockTestAccount result %s\n", string(result))
 }
 
 func TestMethodGetBlacklist(t *testing.T) {
@@ -210,8 +209,7 @@ func TestMethodGetBlacklist(t *testing.T) {
 		{
 			BlockNum:    3,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				input := &MethodGetBlacklistInput{}
-				c.Payload, _ = input.Encode()
+				c.Payload, _ = utils.PackMethod(ABI, MethodGetBlacklist)
 			},
 			BlackList: []common.Address{},
 			Expect: nil,
@@ -221,8 +219,7 @@ func TestMethodGetBlacklist(t *testing.T) {
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				setDefaultOwner(ctx)
 				blockTestAccount(ctx)
-				input := &MethodGetBlacklistInput{}
-				c.Payload, _ = input.Encode()
+				c.Payload, _ = utils.PackMethod(ABI, MethodGetBlacklist)
 			},
 			BlackList: []common.Address{testAddresses[3]},
 			Expect: nil,
@@ -243,7 +240,7 @@ func TestMethodGetBlacklist(t *testing.T) {
 		assert.NoError(t, err)
 		list := make([]common.Address, 1)
 		json.Unmarshal([]byte(got.Result), &list)
-		t.Log(list)
+		t.Log("blackList result: ", list)
 		assert.Equal(t, list, v.BlackList)
 		if v.AfterHandler != nil {
 			v.AfterHandler(v, ctx)
@@ -294,7 +291,7 @@ func TestMethodIsBlocked(t *testing.T) {
 		assert.Equal(t, v.Expect, err)
 		got := new(MethodIsBlockedOutput)
 		got.Decode(result)
-		t.Log(got.Success)
+		t.Log("isBlocked result: ", got.Success)
 		assert.Equal(t, got.Success, v.ReturnData)
 		if v.AfterHandler != nil {
 			v.AfterHandler(v, ctx)
@@ -302,25 +299,25 @@ func TestMethodIsBlocked(t *testing.T) {
 	}
 }
 
-func TestMethodName(t *testing.T){
+func TestMethodName(t *testing.T) {
 	type TestCase struct {
 		BlockNum      int
 		Payload       []byte
 		BeforeHandler func(c *TestCase, ctx *native.NativeContract)
 		AfterHandler  func(c *TestCase, ctx *native.NativeContract)
-		ReturnData string
+		ReturnData    string
 		Expect        error
 	}
 
 	cases := []*TestCase{
 		{
-			BlockNum:    3,
+			BlockNum: 3,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				input := &MethodContractNameInput{}
 				c.Payload, _ = input.Encode()
 			},
 			ReturnData: contractName,
-			Expect: nil,
+			Expect:     nil,
 		},
 	}
 
@@ -334,10 +331,23 @@ func TestMethodName(t *testing.T){
 		assert.Equal(t, v.Expect, err)
 		got := new(MethodContractNameOutput)
 		got.Decode(result)
-		t.Log(got.Name)
+		t.Log("name result: ", got.Name)
 		assert.Equal(t, got.Name, v.ReturnData)
 		if v.AfterHandler != nil {
 			v.AfterHandler(v, ctx)
 		}
 	}
+}
+
+func TestAllMethods(t *testing.T){
+	// changeOwner & getOwner methods are tested
+	TestChangeAndGetOwner(t)
+	// blockAccount is tested
+	TestMethodBlockAccount(t)
+	// getBlacklist method is tested
+	TestMethodGetBlacklist(t)
+	// isBlocked method is tested
+	TestMethodIsBlocked(t)
+	// name method is tested
+	TestMethodName(t)
 }
