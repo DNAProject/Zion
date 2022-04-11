@@ -109,7 +109,7 @@ func (m *MethodChangeOwnerOutput) Encode() ([]byte, error) {
 }
 
 func (m *MethodChangeOwnerOutput) Decode(payload []byte) error {
-	return utils.UnpackMethod(ABI, MethodChangeOwner, m, payload)
+	return utils.UnpackOutputs(ABI, MethodChangeOwner, m, payload)
 }
 
 type MethodGetOwnerInput struct {
