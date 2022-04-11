@@ -2,7 +2,8 @@ package maas_config
 
 import (
 	"crypto/rand"
-	"errors"
+	"encoding/json"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
@@ -25,9 +26,7 @@ var (
 	testEmptyCtx *native.NativeContract
 
 	testSupplyGas    uint64 = 100000000000000000
-	testGenesisNum   int    = 4
 	testCaller       common.Address
-	//testGenesisEpoch *EpochInfo
 )
 
 
@@ -52,66 +51,25 @@ func resetTestContext() {
 	testCaller = testAddresses[0]
 }
 
-func TestChangeOwner(t *testing.T) {
+func TestChangeAndGetOwner(t *testing.T) {
 	type TestCase struct {
-		BlockNum      int
-		StartHeight   uint64
 		Payload       []byte
 		BeforeHandler func(c *TestCase, ctx *native.NativeContract)
 		AfterHandler  func(c *TestCase, ctx *native.NativeContract)
-		Index         int
 		Expect        error
 		ReturnData	  bool
 	}
 
 	cases := []*TestCase{
 		{
-			BlockNum:    3,
-			StartHeight: 2,
-			Index:       1,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				input := &MethodChangeOwnerInput{Addr: common.HexToAddress("0x1231231")}
+				input := &MethodChangeOwnerInput{Addr: testAddresses[0]}
 				c.Payload, _ = input.Encode()
 			},
 			Expect: nil,
 			ReturnData: true,
 		},
-	}
-
-	for _, v := range cases {
-		resetTestContext()
-		ctx := generateNativeContract(testCaller, v.BlockNum)
-		if v.BeforeHandler != nil {
-			v.BeforeHandler(v, ctx)
-		}
-		result, _, err := ctx.ContractRef().NativeCall(testCaller, this, v.Payload)
-		assert.Equal(t, v.Expect, err)
-		res, err := strconv.ParseBool(string(result))
-		assert.NoError(t, err)
-		t.Log("change owner result", res)
-		assert.Equal(t, v.ReturnData, res)
-		if v.AfterHandler != nil {
-			v.AfterHandler(v, ctx)
-		}
-	}
-}
-
-func TestGetOwner(t *testing.T) {
-	type TestCase struct {
-		BlockNum      int
-		StartHeight   uint64
-		Payload       []byte
-		BeforeHandler func(c *TestCase, ctx *native.NativeContract)
-		AfterHandler  func(c *TestCase, ctx *native.NativeContract)
-		Index         int
-		Expect        error
-	}
-
-	cases := []*TestCase{
 		{
-			BlockNum:    3,
-			StartHeight: 2,
-			Index:       1,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				input := &MethodGetOwnerInput{}
 				payload, err := input.Encode()
@@ -122,81 +80,151 @@ func TestGetOwner(t *testing.T) {
 		},
 	}
 
-	for _, v := range cases {
-		resetTestContext()
-		ctx := generateNativeContract(testCaller, v.BlockNum)
+	resetTestContext()
+	ctx := generateNativeContract(testCaller, 3)
+
+	for k, v := range cases {
 		if v.BeforeHandler != nil {
 			v.BeforeHandler(v, ctx)
 		}
 		result, _, err := ctx.ContractRef().NativeCall(testCaller, this, v.Payload)
 		assert.Equal(t, v.Expect, err)
-		t.Log(hexutil.Encode(result))
+		if k == 0 {
+			res, err := strconv.ParseBool(string(result))
+			assert.NoError(t, err)
+			t.Log("change owner result", res)
+			assert.Equal(t, v.ReturnData, res)
+		}
+		if k == 1 {
+			t.Log(hexutil.Encode(result))
+			assert.Equal(t, common.HexToAddress(common.Bytes2Hex(result)), testAddresses[0])
+		}
 		if v.AfterHandler != nil {
 			v.AfterHandler(v, ctx)
 		}
 	}
+}
 
+func setDefaultOwner(ctx *native.NativeContract) {
+	input := &MethodChangeOwnerInput{Addr: testAddresses[0]}
+	payload, _ := input.Encode()
+	result, _, err := ctx.ContractRef().NativeCall(testCaller, this, payload)
+	if err != nil {
+		panic(err)
+	}
+	res, _ := strconv.ParseBool(string(result))
+	if !res {
+		panic("setDefaultOwner error")
+	}
 }
 
 func TestMethodBlockAccount(t *testing.T) {
 	type TestCase struct {
 		BlockNum      int
-		StartHeight   uint64
 		Payload       []byte
 		BeforeHandler func(c *TestCase, ctx *native.NativeContract)
 		AfterHandler  func(c *TestCase, ctx *native.NativeContract)
-		Index         int
+		ReturnData	[]byte
 		Expect        error
 	}
-
 	cases := []*TestCase{
 		{
 			BlockNum:    3,
-			StartHeight: 2,
-			Index:       1,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				input := &MethodBlockAccountInput{Addr: common.HexToAddress("0x123"), DoBlock: true}
+				input := &MethodBlockAccountInput{Addr: testAddresses[3], DoBlock: true}
 				c.Payload, _ = input.Encode()
 			},
-			Expect: errors.New("invalid authority for owner"),
+			ReturnData: []byte{'0'},
+			Expect: ErrInvalidAuthorityForOwner,
+		},
+		{
+			BlockNum:    3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				setDefaultOwner(ctx)
+				input := &MethodBlockAccountInput{Addr: testAddresses[3], DoBlock: true}
+				c.Payload, _ = input.Encode()
+			},
+			ReturnData: []byte{'1'},
+			Expect: nil,
+		},
+		{
+			BlockNum:    3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				setDefaultOwner(ctx)
+				input := &MethodBlockAccountInput{Addr: testAddresses[3], DoBlock: false}
+				c.Payload, _ = input.Encode()
+			},
+			ReturnData: []byte{'1'},
+			Expect: nil,
+		},
+		{
+			BlockNum:    3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				setDefaultOwner(ctx)
+				input := &MethodBlockAccountInput{Addr: testAddresses[4], DoBlock: false}
+				c.Payload, _ = input.Encode()
+			},
+			ReturnData: []byte{'1'},
+			Expect: nil,
 		},
 	}
 
+	resetTestContext()
 	for _, v := range cases {
-		resetTestContext()
 		ctx := generateNativeContract(testCaller, v.BlockNum)
+
 		if v.BeforeHandler != nil {
 			v.BeforeHandler(v, ctx)
 		}
 		result, _, err := ctx.ContractRef().NativeCall(testCaller, this, v.Payload)
 		assert.Equal(t, v.Expect, err)
-		t.Log(hexutil.Encode(result))
+		t.Log(string(result))
+		assert.Equal(t, v.ReturnData, result)
 		if v.AfterHandler != nil {
 			v.AfterHandler(v, ctx)
 		}
 	}
 }
 
+func blockTestAccount(ctx *native.NativeContract) {
+	input := &MethodBlockAccountInput{Addr: testAddresses[3], DoBlock: true}
+	payload, _ := input.Encode()
+	result, _, err := ctx.ContractRef().NativeCall(testCaller, this, payload)
+	if err != nil{
+		panic(err)
+	}
+	fmt.Printf("blockTestAccount result %s\n", string(result))
+}
+
 func TestMethodGetBlacklist(t *testing.T) {
 	type TestCase struct {
 		BlockNum      int
-		StartHeight   uint64
 		Payload       []byte
 		BeforeHandler func(c *TestCase, ctx *native.NativeContract)
 		AfterHandler  func(c *TestCase, ctx *native.NativeContract)
-		Index         int
+		BlackList []common.Address
 		Expect        error
 	}
 
 	cases := []*TestCase{
 		{
 			BlockNum:    3,
-			StartHeight: 2,
-			Index:       1,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				input := &MethodGetBlacklistInput{}
 				c.Payload, _ = input.Encode()
 			},
+			BlackList: []common.Address{},
+			Expect: nil,
+		},
+		{
+			BlockNum:    3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				setDefaultOwner(ctx)
+				blockTestAccount(ctx)
+				input := &MethodGetBlacklistInput{}
+				c.Payload, _ = input.Encode()
+			},
+			BlackList: []common.Address{testAddresses[3]},
 			Expect: nil,
 		},
 	}
@@ -209,7 +237,14 @@ func TestMethodGetBlacklist(t *testing.T) {
 		}
 		result, _, err := ctx.ContractRef().NativeCall(testCaller, this, v.Payload)
 		assert.Equal(t, v.Expect, err)
-		t.Log(hexutil.Encode(result))
+
+		got := new(MethodGetBlacklistOutput)
+		err = got.Decode(result)
+		assert.NoError(t, err)
+		list := make([]common.Address, 1)
+		json.Unmarshal([]byte(got.Result), &list)
+		t.Log(list)
+		assert.Equal(t, list, v.BlackList)
 		if v.AfterHandler != nil {
 			v.AfterHandler(v, ctx)
 		}
@@ -219,23 +254,32 @@ func TestMethodGetBlacklist(t *testing.T) {
 func TestMethodIsBlocked(t *testing.T) {
 	type TestCase struct {
 		BlockNum      int
-		StartHeight   uint64
 		Payload       []byte
 		BeforeHandler func(c *TestCase, ctx *native.NativeContract)
 		AfterHandler  func(c *TestCase, ctx *native.NativeContract)
-		Index         int
+		ReturnData	bool
 		Expect        error
 	}
 
 	cases := []*TestCase{
 		{
 			BlockNum:    3,
-			StartHeight: 2,
-			Index:       1,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				input := &MethodIsBlockedInput{Addr: common.HexToAddress("0x0")}
+				input := &MethodIsBlockedInput{Addr: testAddresses[3]}
 				c.Payload, _ = input.Encode()
 			},
+			ReturnData: false,
+			Expect: nil,
+		},
+		{
+			BlockNum:    3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				setDefaultOwner(ctx)
+				blockTestAccount(ctx)
+				input := &MethodIsBlockedInput{Addr: testAddresses[3]}
+				c.Payload, _ = input.Encode()
+			},
+			ReturnData: true,
 			Expect: nil,
 		},
 	}
@@ -248,7 +292,10 @@ func TestMethodIsBlocked(t *testing.T) {
 		}
 		result, _, err := ctx.ContractRef().NativeCall(testCaller, this, v.Payload)
 		assert.Equal(t, v.Expect, err)
-		t.Log(hexutil.Encode(result))
+		got := new(MethodIsBlockedOutput)
+		got.Decode(result)
+		t.Log(got.Success)
+		assert.Equal(t, got.Success, v.ReturnData)
 		if v.AfterHandler != nil {
 			v.AfterHandler(v, ctx)
 		}
@@ -258,23 +305,21 @@ func TestMethodIsBlocked(t *testing.T) {
 func TestMethodName(t *testing.T){
 	type TestCase struct {
 		BlockNum      int
-		StartHeight   uint64
 		Payload       []byte
 		BeforeHandler func(c *TestCase, ctx *native.NativeContract)
 		AfterHandler  func(c *TestCase, ctx *native.NativeContract)
-		Index         int
+		ReturnData string
 		Expect        error
 	}
 
 	cases := []*TestCase{
 		{
 			BlockNum:    3,
-			StartHeight: 2,
-			Index:       1,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				input := &MethodContractNameInput{}
 				c.Payload, _ = input.Encode()
 			},
+			ReturnData: contractName,
 			Expect: nil,
 		},
 	}
@@ -287,7 +332,10 @@ func TestMethodName(t *testing.T){
 		}
 		result, _, err := ctx.ContractRef().NativeCall(testCaller, this, v.Payload)
 		assert.Equal(t, v.Expect, err)
-		t.Log(hexutil.Encode(result))
+		got := new(MethodContractNameOutput)
+		got.Decode(result)
+		t.Log(got.Name)
+		assert.Equal(t, got.Name, v.ReturnData)
 		if v.AfterHandler != nil {
 			v.AfterHandler(v, ctx)
 		}
