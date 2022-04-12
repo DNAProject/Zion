@@ -313,8 +313,7 @@ func TestMethodName(t *testing.T) {
 		{
 			BlockNum: 3,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				input := &MethodContractNameInput{}
-				c.Payload, _ = input.Encode()
+				c.Payload, _ = utils.PackMethod(ABI, MethodName)
 			},
 			ReturnData: contractName,
 			Expect:     nil,
