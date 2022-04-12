@@ -337,16 +337,3 @@ func TestMethodName(t *testing.T) {
 		}
 	}
 }
-
-func TestAllMethods(t *testing.T){
-	// changeOwner & getOwner methods are tested
-	TestChangeAndGetOwner(t)
-	// blockAccount is tested
-	TestMethodBlockAccount(t)
-	// getBlacklist method is tested
-	TestMethodGetBlacklist(t)
-	// isBlocked method is tested
-	TestMethodIsBlocked(t)
-	// name method is tested
-	TestMethodName(t)
-}

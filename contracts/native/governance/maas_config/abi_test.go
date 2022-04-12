@@ -211,16 +211,3 @@ func TestMethodGetBlacklistOutput(t *testing.T) {
 		assert.Equal(t, got, output)
 	}
 }
-
-func TestAllAbi(t *testing.T){
-	TestABIShowJonString(t)
-	TestABIMethodContractName(t)
-	TestABIMethodChangeOwnerInput(t)
-	TestABIMethodChangeOwnerOutput(t)
-	TestABIMethodGetOwnerOutput(t)
-	TestMethodBlockAccountInput(t)
-	TestMethodBlockAccountOutput(t)
-	TestMethodIsBlockedInput(t)
-	TestMethodIsBlockedOutput(t)
-	TestMethodGetBlacklistOutput(t)
-}
