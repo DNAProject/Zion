@@ -1,7 +1,3 @@
----
-title: The `eth` Module
----
-
 # Zion JSON RPC API Guide
 
 ## The default block parameter
