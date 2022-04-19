@@ -15,7 +15,7 @@ The following methods have an optional extra `defaultBlock` parameter:
 - [eth_getStorageAt](#eth_getstorageat)
 - [eth_call](#eth_call)
 
-When requests are made that act on the state of Ethereum, the last parameter determines the height of the block.
+When requests are made that act on the state of Zion, the last parameter determines the height of the block.
 
 The following options are possible for the `defaultBlock` parameter:
 
@@ -1473,7 +1473,7 @@ Response
 
 ### eth_protocolVersion
 
-Returns the current ethereum protocol version.
+Returns the current zion protocol version.
 
 #### Parameters
 
@@ -1481,7 +1481,7 @@ None
 
 #### Returns
 
-- `String` - The current ethereum protocol version.
+- `String` - The current zion protocol version.
 
 #### Example
 
