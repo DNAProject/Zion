@@ -2,7 +2,7 @@
 
 ## The default block parameter
 
-The following methods have an optional extra `defaultBlock` parameter:
+The following methods have an extra `defaultBlock` parameter:
 
 - [eth_estimateGas](#eth_estimategas)
 - [eth_getBalance](#eth_getbalance)
@@ -47,13 +47,10 @@ The following options are possible for the `defaultBlock` parameter:
 - [eth_newBlockFilter](#eth_newblockfilter)
 - [eth_newFilter](#eth_newfilter)
 - [eth_newPendingTransactionFilter](#eth_newpendingtransactionfilter)
-- [eth_protocolVersion](#eth_protocolversion)
 - [eth_sendRawTransaction](#eth_sendrawtransaction)
 - [eth_sendTransaction](#eth_sendtransaction)
 - [eth_sign](#eth_sign)
 - [eth_signTransaction](#eth_signtransaction)
-- [eth_submitHashrate](#eth_submithashrate)
-- [eth_submitWork](#eth_submitwork)
 - [eth_syncing](#eth_syncing)
 - [eth_uninstallFilter](#eth_uninstallfilter)
 
@@ -1119,36 +1116,6 @@ Response
 
 ***
 
-### eth_protocolVersion
-
-Returns the current zion protocol version.
-
-#### Parameters
-
-None
-
-#### Returns
-
-- `String` - The current zion protocol version.
-
-#### Example
-
-Request
-```bash
-curl --data '{"method":"eth_protocolVersion","params":[],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8545
-```
-
-Response
-```js
-{
-  "id": 1,
-  "jsonrpc": "2.0",
-  "result": "0x63" // 99
-}
-```
-
-***
-
 ### eth_sendRawTransaction
 
 Creates new message call transaction or a contract creation for signed transactions.
@@ -1235,6 +1202,8 @@ Response
 The sign method calculates an Ethereum specific signature with: `sign(keccak256("Ethereum Signed Message:
 " + len(message) + message)))`.
 
+**Note**: the address to sign with must be unlocked.
+
 #### Parameters
 
 0. `Address` - 20 Bytes - address.
@@ -1272,6 +1241,8 @@ Response
 ### eth_signTransaction
 
 Signs transactions without dispatching it to the network. It can be later submitted using [eth_sendRawTransaction](#eth_sendrawtransaction).
+
+**Note**: the address to sign with must be unlocked.
 
 #### Parameters
 
@@ -1311,84 +1282,6 @@ Response
       "input": "0x603880600c6000396000f300603880600c6000396000f3603880600c6000396000f360"
     }
   }
-}
-```
-
-***
-
-### eth_submitHashrate
-
-Used for submitting mining hashrate.
-
-#### Parameters
-
-0. `Data` - a hexadecimal string representation (32 bytes) of the hash rate.
-0. `Data` - A random hexadecimal(32 bytes) ID identifying the client.
-
-```js
-params: [
-  "0x0000000000000000000000000000000000000000000000000000000000500000",
-  "0x59daa26581d0acd1fce254fb7e85952f4c09d0915afd33d3886cd914bc7d283c"
-]
-```
-
-#### Returns
-
-- `Boolean` - `true` if submitting went through succesfully and `false` otherwise.
-
-#### Example
-
-Request
-```bash
-curl --data '{"method":"eth_submitHashrate","params":["0x0000000000000000000000000000000000000000000000000000000000500000","0x59daa26581d0acd1fce254fb7e85952f4c09d0915afd33d3886cd914bc7d283c"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8545
-```
-
-Response
-```js
-{
-  "id": 1,
-  "jsonrpc": "2.0",
-  "result": true
-}
-```
-
-***
-
-### eth_submitWork
-
-Used for submitting a proof-of-work solution.
-
-#### Parameters
-
-0. `Data` - 8 Bytes - The nonce found (64 bits).
-0. `Data` - 32 Bytes - The header's pow-hash (256 bits)
-0. `Data` - 32 Bytes - The mix digest (256 bits).
-
-```js
-params: [
-  "0x0000000000000001",
-  "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-  "0xD1FE5700000000000000000000000000D1FE5700000000000000000000000000"
-]
-```
-
-#### Returns
-
-- `Boolean` - `true` if the provided solution is valid, otherwise `false`.
-
-#### Example
-
-Request
-```bash
-curl --data '{"method":"eth_submitWork","params":["0x0000000000000001","0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef","0xD1FE5700000000000000000000000000D1FE5700000000000000000000000000"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8545
-```
-
-Response
-```js
-{
-  "id": 1,
-  "jsonrpc": "2.0",
-  "result": true
 }
 ```
 
