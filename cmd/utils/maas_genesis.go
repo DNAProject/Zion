@@ -26,7 +26,7 @@ import (
 
 type MaasGenesis struct {
 	Config struct {
-		ChainId string `json:"chainId"`
+		ChainId uint64 `json:"chainId"`
 		HomesteadBlock uint64 `json:"homesteadBlock"`
 		Eip150Block uint64 `json:"eip150Block"`
 		Eip155Block uint64 `json:"eip155Block"`
@@ -69,7 +69,7 @@ func (m *MaasGenesis) Decode(data string) error {
 // it's used only for initialization purpose
 func (m *MaasGenesis) Default() {
 	m.Config =  struct{
-		ChainId string `json:"chainId"`
+		ChainId uint64 `json:"chainId"`
 		HomesteadBlock uint64 `json:"homesteadBlock"`
 		Eip150Block uint64 `json:"eip150Block"`
 		Eip155Block uint64 `json:"eip155Block"`
@@ -82,7 +82,7 @@ func (m *MaasGenesis) Default() {
 			Protocol string `json:"protocol"`
 		} `json:"hotstuff"`
 	}{
-		"10898",0,0,0,0,0,0,0,0,
+		10898,0,0,0,0,0,0,0,0,
 		struct {Protocol string `json:"protocol"`} {
 			"basic",
 		},
