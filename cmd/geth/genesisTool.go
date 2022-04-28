@@ -59,6 +59,11 @@ func generateMaasGensis(ctx *cli.Context) error {
 		utils.Fatalf("This command requires an argument.")
 	}
 	basePath := ctx.String(basePathFlag.Name)
+	if basePath == ""{
+		basePath = utils.DefaultBasePath()
+	} else if basePath[len(basePath)-1:len(basePath)] != "/" {
+		basePath += "/"
+	}
 	nodeNum, err := strconv.Atoi(ctx.Args().First())
 	if err != nil {
 		utils.Fatalf("parse node number error %s", err.Error())
@@ -138,11 +143,8 @@ func generateMaasGensis(ctx *cli.Context) error {
 	genesis.ExtraData = genesisExtra
 	geneJson, _ := genesis.Encode()
 	contents[0] = geneJson
-	if basePath == ""{
-		basePath = utils.DefaultBasePath()
-	}
-	filePaths[0] = basePath + "genesis.json"
 
+	filePaths[0] = basePath + "genesis.json"
 	staticNodesEnc, err := json.MarshalIndent(staticNodes, "", "\t")
 	if err != nil {
 		utils.Fatalf(err.Error())

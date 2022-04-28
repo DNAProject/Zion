@@ -20,6 +20,7 @@ package utils
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -119,6 +120,7 @@ func DumpGenesis(filePaths [3]string, contents [3]string) error {
 	return nil
 }
 
+// If there is no such directory, it will creates this dir
 func ensureBaseDir(fpath string) error {
 	baseDir := path.Dir(fpath)
 	info, err := os.Stat(baseDir)
@@ -151,4 +153,13 @@ func (m *Node) Decode(data string) error {
 	dataBytes := []byte(data)
 	err := json.Unmarshal(dataBytes, m)
 	return err
+}
+
+// This is only used in unit test
+func DeleteBasePath(basePath string) {
+	dir, _ := ioutil.ReadDir(basePath)
+	for _, d := range dir {
+		os.RemoveAll(path.Join([]string{basePath, d.Name()}...))
+	}
+	os.Remove(basePath)
 }
