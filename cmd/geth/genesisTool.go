@@ -38,9 +38,19 @@ var (
 		Subcommands: []cli.Command{
 			{
 				Name: "generate",
-				Action:    utils.MigrateFlags(generateMaasGensis),
+				Flags: []cli.Flag{
+					basePathFlag,
+				},
+				Action: utils.MigrateFlags(generateMaasGensis),
 			},
 		},
+	}
+)
+
+var (
+	basePathFlag = cli.StringFlag{
+		Name:  "basePath",
+		Usage: "The path to store genesis configuration files",
 	}
 )
 
@@ -48,14 +58,14 @@ func generateMaasGensis(ctx *cli.Context) error {
 	if len(ctx.Args()) < 1 {
 		utils.Fatalf("This command requires an argument.")
 	}
-
+	basePath := ctx.String(basePathFlag.Name)
 	nodeNum, err := strconv.Atoi(ctx.Args().First())
 	if err != nil {
 		utils.Fatalf("parse node number error %s", err.Error())
 	}
 
 	if nodeNum < 4 {
-		utils.Fatalf("got %v node, but hotstuff BFT requires at least 4 nodes", nodeNum)
+		utils.Fatalf("got %v nodes, but hotstuff BFT requires at least 4 nodes", nodeNum)
 	}
 
 	genesis := new(utils.MaasGenesis)
@@ -64,6 +74,8 @@ func generateMaasGensis(ctx *cli.Context) error {
 	staticNodes := make([]string, 0)
 
 	nodes := make([]*tool.Node, 0)
+	metaNodes := make([]*utils.Node, 0)
+
 	for i := 0; i < nodeNum; i++ {
 		key, _ := crypto.GenerateKey()
 		addr := crypto.PubkeyToAddress(key.PublicKey)
@@ -110,6 +122,14 @@ func generateMaasGensis(ctx *cli.Context) error {
 			"100000000000000000000000000000",
 		}
 
+		metaNode := &utils.Node{
+			Address: v.Address,
+			NodeKey: v.NodeKey,
+			PubKey: pubInf,
+			Static: v.Static,
+		}
+
+		metaNodes = append(metaNodes, metaNode)
 		staticNodes = append(staticNodes, tool.NodeStaticInfoTemp(nodeInf))
 	}
 	filePaths := [3]string{}
@@ -118,7 +138,9 @@ func generateMaasGensis(ctx *cli.Context) error {
 	genesis.ExtraData = genesisExtra
 	geneJson, _ := genesis.Encode()
 	contents[0] = geneJson
-	basePath := "./../../build/genesisTool/"
+	if basePath == ""{
+		basePath = utils.DefaultBasePath()
+	}
 	filePaths[0] = basePath + "genesis.json"
 
 	staticNodesEnc, err := json.MarshalIndent(staticNodes, "", "\t")
@@ -128,8 +150,12 @@ func generateMaasGensis(ctx *cli.Context) error {
 	contents[1] = string(staticNodesEnc)
 	filePaths[1] = basePath + "static-nodes.json"
 
-	sortedNodesEnc, _ := json.MarshalIndent(sortedNodes,"", "\t")
+	sortedNodesEnc, _ := json.MarshalIndent(metaNodes,"", "\t")
 	contents[2] = string(sortedNodesEnc)
 	filePaths[2] = basePath + "nodes.json"
-	return utils.DumpGenesis(filePaths, contents)
+	err = utils.DumpGenesis(filePaths, contents)
+	if err != nil {
+		utils.Fatalf(err.Error())
+	}
+	return nil
 }

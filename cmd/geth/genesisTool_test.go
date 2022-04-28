@@ -12,10 +12,14 @@ func TestGenesisTool(t *testing.T){
 	}{
 		{
 			[]string{"genesisTool", "generate", "3"},
-			errors.New("Fatal: got 3 node, but hotstuff BFT requires at least 4 nodes"),
+			errors.New("Fatal: got 3 nodes, but hotstuff BFT requires at least 4 nodes"),
 		},
 		{
 			[]string{"genesisTool", "generate", "5"},
+			nil,
+		},
+		{
+			[]string{"genesisTool", "generate", "5", "-basePath", "./../../build/bin/testGenesis/"},
 			nil,
 		},
 	}

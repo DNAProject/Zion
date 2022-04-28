@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -31,5 +32,19 @@ func TestDumpGenesis(t *testing.T) {
 	contents[2] = "[\n        {\n                \"Address\": \"0x152e6e7C0d1637Cfc3C909852BD9914A67F91340\",\n                \"NodeKey\": \"0x22b2c3a6f4be86581dbc729acba0048d70e6a960847d61902dc54e0dad0b8a00\",\n                \"Static\": \"enode://13ec7f7dde00342f076bdbaafa1488b864fb7d34a744379a421d6546e4ea76f74d364fa3b1350622760674110ccae61c450631d69c20ac58b711f2e55c934bcf@127.0.0.1:30300?discport=0\"\n        },\n        {\n                \"Address\": \"0x1E306D7C8Ea7b042ecc974A7609a84b888453Cd8\",\n                \"NodeKey\": \"0xc9ac34375e9f739b5951058f17afb7264a77ad7decf086e85eafb1c9af8305a1\",\n                \"Static\": \"enode://c0e4ac8fa2daab3994b15ffa95284f62ae647e1a7b572f899d77eafd0b2f8be8e337260129acf98832a453ef25e749c10c13d45e5990fd27979c9c70357301f5@127.0.0.1:30300?discport=0\"\n        },\n        {\n                \"Address\": \"0x2B707ae427547Ae18c7bddB5FDbd78a14386E874\",\n                \"NodeKey\": \"0xf07946ed4c70a4c1bf7bdf33d0d7cd870b24f27c450c3a14cef824dde1e26b9c\",\n                \"Static\": \"enode://4deb701b087b33338e93bb87f6a843015a0d18987ff8f187f7f25dd822deedeb0bed2069070ace715e01bc9a0a0ae5016ae85e66f5293056571e3a0854aba26f@127.0.0.1:30300?discport=0\"\n        },\n        {\n                \"Address\": \"0x525b5500eE75fE2A84Cc879Cf55BB9e691A802EB\",\n                \"NodeKey\": \"0x2f09f88be6885546c2faba9d8835d772d8f2325d64273d7153432effdc78224f\",\n                \"Static\": \"enode://115ef399832f714c7723a42fb2d6707094020eb6446fdeeb72c0cb137e773984bdb4242b4c22691ed154129ef8f0216ee78d0df873a625aba156abf3628904b8@127.0.0.1:30300?discport=0\"\n        }\n]\n"
 	err := DumpGenesis(filePaths, contents)
 	assert.NoError(t, err)
+}
+
+func TestNodeFuncs(t *testing.T) {
+	node := new(Node)
+	node.Address = common.HexToAddress("0x123").String()
+	node.NodeKey = "0x1231231asasd"
+	node.PubKey = "0x123dsaad122"
+	node.Static = "enode:1231asdas"
+	nodeJson, err := node.Encode()
+	assert.NoError(t, err)
+	got := new(Node)
+	err = got.Decode(nodeJson)
+	assert.NoError(t, err)
+	assert.Equal(t, got, node)
 }
 

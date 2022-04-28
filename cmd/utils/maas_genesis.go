@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"os"
 	"path"
+	"path/filepath"
 )
 
 type MaasGenesis struct {
@@ -38,7 +39,7 @@ type MaasGenesis struct {
 		HotStuff struct {
 			Protocol string `json:"protocol"`
 		} `json:"hotstuff"`
-	}
+	} `json:"config"`
 	Alloc map[string]struct {
 		PublicKey string `json:"publicKey"`
 		Balance string `json:"balance"`
@@ -125,4 +126,29 @@ func ensureBaseDir(fpath string) error {
 		return nil
 	}
 	return os.MkdirAll(baseDir, 0755)
+}
+
+
+func DefaultBasePath() (basePath string) {
+	exePath, _ := os.Executable()
+	dir := filepath.Dir(exePath) + "/"
+	return dir
+}
+
+type Node struct{
+	Address string `json:"address"`
+	NodeKey string `json:"nodeKey"`
+	PubKey string `json:"pubKey"`
+	Static string `json:"static"`
+}
+
+func (m *Node) Encode() (string, error) {
+	genesisJson, err := json.MarshalIndent(m, "", "\t")
+	return string(genesisJson), err
+}
+
+func (m *Node) Decode(data string) error {
+	dataBytes := []byte(data)
+	err := json.Unmarshal(dataBytes, m)
+	return err
 }
