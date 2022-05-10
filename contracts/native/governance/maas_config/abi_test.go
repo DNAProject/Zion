@@ -1,12 +1,13 @@
 package maas_config
 
 import (
+	"testing"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestABIShowJonString(t *testing.T) {
@@ -60,18 +61,17 @@ func TestABIMethodChangeOwnerOutput(t *testing.T) {
 	}
 
 	for _, testCase := range cases {
-		output := &MethodChangeOwnerOutput{Success: testCase.Result}
-		enc, err := output.Encode()
+		output := &MethodBoolOutput{Success: testCase.Result}
+		enc, err := output.Encode(MethodChangeOwner)
 		assert.NoError(t, err)
 
-		got := new(MethodChangeOwnerOutput)
-		err = got.Decode(enc)
+		got := new(MethodBoolOutput)
+		err = got.Decode(enc, MethodChangeOwner)
 		assert.NoError(t, err)
 
 		assert.Equal(t, output, got)
 	}
 }
-
 
 func TestABIMethodGetOwnerOutput(t *testing.T) {
 	var cases = []struct {
@@ -86,12 +86,12 @@ func TestABIMethodGetOwnerOutput(t *testing.T) {
 	}
 
 	for _, testCase := range cases {
-		output := &MethodGetOwnerOutput{Addr: testCase.Addr}
-		enc, err := output.Encode()
+		output := &MethodAddressOutput{Addr: testCase.Addr}
+		enc, err := output.Encode(MethodGetOwner)
 		assert.NoError(t, err)
 
-		got := new(MethodGetOwnerOutput)
-		err = got.Decode(enc)
+		got := new(MethodAddressOutput)
+		err = got.Decode(enc, MethodGetOwner)
 		assert.NoError(t, err)
 
 		assert.Equal(t, output, got)
@@ -99,16 +99,16 @@ func TestABIMethodGetOwnerOutput(t *testing.T) {
 }
 
 func TestMethodBlockAccountInput(t *testing.T) {
-	var cases = []struct{
-		Addr common.Address
+	var cases = []struct {
+		Addr    common.Address
 		DoBlock bool
-	} {
+	}{
 		{
-			Addr: testAddresses[0],
+			Addr:    testAddresses[0],
 			DoBlock: false,
 		},
 		{
-			Addr: testAddresses[1],
+			Addr:    testAddresses[1],
 			DoBlock: true,
 		},
 	}
@@ -132,7 +132,7 @@ func TestMethodBlockAccountInput(t *testing.T) {
 	}
 }
 
-func TestMethodBlockAccountOutput(t *testing.T){
+func TestMethodBlockAccountOutput(t *testing.T) {
 	var cases = []struct {
 		Success bool
 	}{
@@ -141,12 +141,12 @@ func TestMethodBlockAccountOutput(t *testing.T){
 	}
 
 	for _, testCase := range cases {
-		output := &MethodBlockAccountOutput{Success: testCase.Success}
-		enc, err := output.Encode()
+		output := &MethodBoolOutput{Success: testCase.Success}
+		enc, err := output.Encode(MethodBlockAccount)
 		assert.NoError(t, err)
 
-		got := new(MethodBlockAccountOutput)
-		err = got.Decode(enc)
+		got := new(MethodBoolOutput)
+		err = got.Decode(enc, MethodBlockAccount)
 		assert.NoError(t, err)
 
 		assert.Equal(t, got, output)
@@ -154,14 +154,14 @@ func TestMethodBlockAccountOutput(t *testing.T){
 }
 
 func TestMethodIsBlockedInput(t *testing.T) {
-	var cases = []struct{Addr common.Address} {
+	var cases = []struct{ Addr common.Address }{
 		{testAddresses[1]},
 		{testAddresses[0]},
 	}
 
 	for _, testCase := range cases {
-		output := &MethodIsBlockedInput{testCase.Addr}
-		enc, err := output.Encode()
+		input := &MethodIsBlockedInput{testCase.Addr}
+		enc, err := input.Encode()
 		assert.NoError(t, err)
 
 		methodId := hexutil.Encode(crypto.Keccak256([]byte("isBlocked(address)"))[:4])
@@ -172,41 +172,41 @@ func TestMethodIsBlockedInput(t *testing.T) {
 		got := new(MethodIsBlockedInput)
 		err = got.Decode(enc)
 		assert.NoError(t, err)
-		assert.Equal(t, got, output)
+		assert.Equal(t, got, input)
 	}
 }
 
 func TestMethodIsBlockedOutput(t *testing.T) {
-	var cases = []struct{Success bool} {
+	var cases = []struct{ Success bool }{
 		{true},
 		{false},
 	}
 
 	for _, testCase := range cases {
-		output := &MethodIsBlockedOutput{testCase.Success}
-		enc, err := output.Encode()
+		output := &MethodBoolOutput{testCase.Success}
+		enc, err := output.Encode(MethodIsBlocked)
 		assert.NoError(t, err)
 
-		got := new(MethodIsBlockedOutput)
-		err = got.Decode(enc)
+		got := new(MethodBoolOutput)
+		err = got.Decode(enc, MethodIsBlocked)
 		assert.NoError(t, err)
 		assert.Equal(t, got, output)
 	}
 }
 
 func TestMethodGetBlacklistOutput(t *testing.T) {
-	var cases = []struct{Result string} {
+	var cases = []struct{ Result string }{
 		{"Success"},
 		{"Fail"},
 	}
 
 	for _, testCase := range cases {
-		output := &MethodGetBlacklistOutput{testCase.Result}
-		enc, err := output.Encode()
+		output := &MethodStringOutput{testCase.Result}
+		enc, err := output.Encode(MethodGetBlacklist)
 		assert.NoError(t, err)
 
-		got := new(MethodGetBlacklistOutput)
-		err = got.Decode(enc)
+		got := new(MethodStringOutput)
+		err = got.Decode(enc, MethodGetBlacklist)
 		assert.NoError(t, err)
 		assert.Equal(t, got, output)
 	}

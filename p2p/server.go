@@ -31,6 +31,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/mclock"
+	"github.com/ethereum/go-ethereum/contracts/native/native_client"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
@@ -158,10 +161,21 @@ type Config struct {
 	clock mclock.Clock
 }
 
+// blockChain provides the state of blockchain
+// some pre checks in p2p Server.
+type blockChain interface {
+	CurrentBlock() *types.Block
+	GetBlock(hash common.Hash, number uint64) *types.Block
+	StateAt(root common.Hash) (*state.StateDB, error)
+}
+
 // Server manages all peer connections.
 type Server struct {
 	// Config fields may not be modified while the server is running.
 	Config
+
+	// block chain
+	Chain blockChain
 
 	// Hooks for testing. These are useful because we can inhibit
 	// the whole protocol stack.
@@ -959,6 +973,18 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 		srv.log.Trace("Failed RLPx handshake", "addr", c.fd.RemoteAddr(), "conn", c.flags, "err", err)
 		return err
 	}
+
+	// check if address is in node whitelist
+	stateDb, err := srv.Chain.StateAt(srv.Chain.CurrentBlock().Root())
+	if err != nil {
+		srv.log.Trace("Failed to get stateDB", "err", err)
+		return err
+	}
+	remoteAddr := crypto.PubkeyToAddress(*remotePubkey)
+	if native_client.IsNodeWhiteEnable(stateDb) && !native_client.IsInNodeWhite(stateDb, &remoteAddr) {
+		return native_client.ErrNotInNodeWhite
+	}
+
 	if dialDest != nil {
 		c.node = dialDest
 	} else {

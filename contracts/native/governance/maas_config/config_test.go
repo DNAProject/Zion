@@ -4,6 +4,11 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"errors"
+	"math/big"
+	"os"
+	"strconv"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
@@ -11,10 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"os"
-	"strconv"
-	"testing"
 )
 
 func TestMain(m *testing.M) {
@@ -26,10 +27,9 @@ var (
 	testStateDB  *state.StateDB
 	testEmptyCtx *native.NativeContract
 
-	testSupplyGas    uint64 = 100000000000000000
-	testCaller       common.Address
+	testSupplyGas uint64 = 100000000000000000
+	testCaller    common.Address
 )
-
 
 func generateNativeContractRef(origin common.Address, blockNum int) *native.ContractRef {
 	token := make([]byte, common.HashLength)
@@ -58,7 +58,7 @@ func TestChangeAndGetOwner(t *testing.T) {
 		BeforeHandler func(c *TestCase, ctx *native.NativeContract)
 		AfterHandler  func(c *TestCase, ctx *native.NativeContract)
 		Expect        error
-		ReturnData	  bool
+		ReturnData    bool
 	}
 
 	cases := []*TestCase{
@@ -67,7 +67,7 @@ func TestChangeAndGetOwner(t *testing.T) {
 				input := &MethodChangeOwnerInput{Addr: testAddresses[0]}
 				c.Payload, _ = input.Encode()
 			},
-			Expect: nil,
+			Expect:     nil,
 			ReturnData: true,
 		},
 		{
@@ -124,48 +124,48 @@ func TestMethodBlockAccount(t *testing.T) {
 		Payload       []byte
 		BeforeHandler func(c *TestCase, ctx *native.NativeContract)
 		AfterHandler  func(c *TestCase, ctx *native.NativeContract)
-		ReturnData	[]byte
+		ReturnData    []byte
 		Expect        error
 	}
 	cases := []*TestCase{
 		{
-			BlockNum:    3,
+			BlockNum: 3,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				input := &MethodBlockAccountInput{Addr: testAddresses[3], DoBlock: true}
 				c.Payload, _ = input.Encode()
 			},
 			ReturnData: []byte{'0'},
-			Expect: errors.New("invalid authority for owner"),
+			Expect:     errors.New("invalid authority for owner"),
 		},
 		{
-			BlockNum:    3,
+			BlockNum: 3,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				setDefaultOwner(ctx)
 				input := &MethodBlockAccountInput{Addr: testAddresses[3], DoBlock: true}
 				c.Payload, _ = input.Encode()
 			},
 			ReturnData: []byte{'1'},
-			Expect: nil,
+			Expect:     nil,
 		},
 		{
-			BlockNum:    3,
+			BlockNum: 3,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				setDefaultOwner(ctx)
 				input := &MethodBlockAccountInput{Addr: testAddresses[3], DoBlock: false}
 				c.Payload, _ = input.Encode()
 			},
 			ReturnData: []byte{'1'},
-			Expect: nil,
+			Expect:     nil,
 		},
 		{
-			BlockNum:    3,
+			BlockNum: 3,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				setDefaultOwner(ctx)
 				input := &MethodBlockAccountInput{Addr: testAddresses[4], DoBlock: false}
 				c.Payload, _ = input.Encode()
 			},
 			ReturnData: []byte{'1'},
-			Expect: nil,
+			Expect:     nil,
 		},
 	}
 
@@ -191,7 +191,7 @@ func blockTestAccount(ctx *native.NativeContract) {
 	payload, _ := input.Encode()
 	result, _, err := ctx.ContractRef().NativeCall(testCaller, this, payload)
 	if err != nil || result[0] != utils.ByteSuccess[0] {
-		panic("blockTestAccount err: "+err.Error())
+		panic("blockTestAccount err: " + err.Error())
 	}
 }
 
@@ -201,28 +201,28 @@ func TestMethodGetBlacklist(t *testing.T) {
 		Payload       []byte
 		BeforeHandler func(c *TestCase, ctx *native.NativeContract)
 		AfterHandler  func(c *TestCase, ctx *native.NativeContract)
-		BlackList []common.Address
+		BlackList     []common.Address
 		Expect        error
 	}
 
 	cases := []*TestCase{
 		{
-			BlockNum:    3,
+			BlockNum: 3,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				c.Payload, _ = utils.PackMethod(ABI, MethodGetBlacklist)
 			},
 			BlackList: []common.Address{},
-			Expect: nil,
+			Expect:    nil,
 		},
 		{
-			BlockNum:    3,
+			BlockNum: 3,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				setDefaultOwner(ctx)
 				blockTestAccount(ctx)
 				c.Payload, _ = utils.PackMethod(ABI, MethodGetBlacklist)
 			},
 			BlackList: []common.Address{testAddresses[3]},
-			Expect: nil,
+			Expect:    nil,
 		},
 	}
 
@@ -235,8 +235,8 @@ func TestMethodGetBlacklist(t *testing.T) {
 		result, _, err := ctx.ContractRef().NativeCall(testCaller, this, v.Payload)
 		assert.Equal(t, v.Expect, err)
 
-		got := new(MethodGetBlacklistOutput)
-		err = got.Decode(result)
+		got := new(MethodStringOutput)
+		err = got.Decode(result, MethodGetBlacklist)
 		assert.NoError(t, err)
 		list := make([]common.Address, 1)
 		json.Unmarshal([]byte(got.Result), &list)
@@ -254,22 +254,22 @@ func TestMethodIsBlocked(t *testing.T) {
 		Payload       []byte
 		BeforeHandler func(c *TestCase, ctx *native.NativeContract)
 		AfterHandler  func(c *TestCase, ctx *native.NativeContract)
-		ReturnData	bool
+		ReturnData    bool
 		Expect        error
 	}
 
 	cases := []*TestCase{
 		{
-			BlockNum:    3,
+			BlockNum: 3,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				input := &MethodIsBlockedInput{Addr: testAddresses[3]}
 				c.Payload, _ = input.Encode()
 			},
 			ReturnData: false,
-			Expect: nil,
+			Expect:     nil,
 		},
 		{
-			BlockNum:    3,
+			BlockNum: 3,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				setDefaultOwner(ctx)
 				blockTestAccount(ctx)
@@ -277,7 +277,7 @@ func TestMethodIsBlocked(t *testing.T) {
 				c.Payload, _ = input.Encode()
 			},
 			ReturnData: true,
-			Expect: nil,
+			Expect:     nil,
 		},
 	}
 
@@ -289,8 +289,8 @@ func TestMethodIsBlocked(t *testing.T) {
 		}
 		result, _, err := ctx.ContractRef().NativeCall(testCaller, this, v.Payload)
 		assert.Equal(t, v.Expect, err)
-		got := new(MethodIsBlockedOutput)
-		got.Decode(result)
+		got := new(MethodBoolOutput)
+		got.Decode(result, MethodIsBlocked)
 		t.Log("isBlocked result: ", got.Success)
 		assert.Equal(t, got.Success, v.ReturnData)
 		if v.AfterHandler != nil {
