@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -47,8 +48,6 @@ func resetTestContext() {
 	db := rawdb.NewMemoryDatabase()
 	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	testEmptyCtx = native.NewNativeContract(testStateDB, nil)
-	//testGenesisPeers := generateTestPeers(testGenesisNum)
-	//testGenesisEpoch, _ = storeGenesisEpoch(testStateDB, testGenesisPeers)
 	testCaller = testAddresses[0]
 }
 
@@ -335,5 +334,353 @@ func TestMethodName(t *testing.T) {
 		if v.AfterHandler != nil {
 			v.AfterHandler(v, ctx)
 		}
+	}
+}
+
+func encodeMethodBoolOutput(result bool, methodName string) []byte {
+	enc, _ := (&MethodBoolOutput{result}).Encode(methodName)
+	return enc
+}
+
+func encodeMethodStringOutput(result string, methodName string) []byte {
+	enc, _ := (&MethodStringOutput{result}).Encode(methodName)
+	return enc
+}
+
+func TestMethodSetNodeWhite(t *testing.T) {
+	type TestCase struct {
+		BlockNum      int
+		Payload       []byte
+		BeforeHandler func(c *TestCase, ctx *native.NativeContract)
+		AfterHandler  func(c *TestCase, ctx *native.NativeContract)
+		ReturnData    []byte
+		Expect        error
+	}
+	cases := []*TestCase{
+		{
+			BlockNum: 3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				input := &MethodSetNodeWhiteInput{Addr: testAddresses[3], IsWhite: true}
+				c.Payload, _ = input.Encode()
+			},
+			ReturnData: []byte{'0'},
+			Expect:     errors.New("invalid authority for owner"),
+		},
+		{
+			BlockNum: 3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				setDefaultOwner(ctx)
+				input := &MethodSetNodeWhiteInput{Addr: testAddresses[3], IsWhite: true}
+				c.Payload, _ = input.Encode()
+			},
+			ReturnData: []byte{'1'},
+			Expect:     nil,
+		},
+		{
+			BlockNum: 3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				input := &MethodIsInNodeWhiteInput{Addr: testAddresses[3]}
+				c.Payload, _ = input.Encode()
+			},
+			ReturnData: encodeMethodBoolOutput(true, MethodIsInNodeWhite),
+			Expect:     nil,
+		},
+		{
+			BlockNum: 3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				c.Payload, _ = utils.PackMethod(ABI, MethodGetNodeWhitelist)
+			},
+			ReturnData: encodeMethodStringOutput("[\""+strings.ToLower(testAddresses[3].String())+"\"]", MethodGetNodeWhitelist),
+			Expect:     nil,
+		},
+		{
+			BlockNum: 3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				setDefaultOwner(ctx)
+				input := &MethodSetNodeWhiteInput{Addr: testAddresses[3], IsWhite: false}
+				c.Payload, _ = input.Encode()
+			},
+			ReturnData: []byte{'1'},
+			Expect:     nil,
+		},
+		{
+			BlockNum: 3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				input := &MethodIsInNodeWhiteInput{Addr: testAddresses[3]}
+				c.Payload, _ = input.Encode()
+			},
+			ReturnData: encodeMethodBoolOutput(false, MethodIsInNodeWhite),
+			Expect:     nil,
+		},
+		{
+			BlockNum: 3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				c.Payload, _ = utils.PackMethod(ABI, MethodGetNodeWhitelist)
+			},
+			ReturnData: encodeMethodStringOutput("[]", MethodGetNodeWhitelist),
+			Expect:     nil,
+		},
+	}
+
+	resetTestContext()
+	for _, v := range cases {
+		ctx := generateNativeContract(testCaller, v.BlockNum)
+
+		if v.BeforeHandler != nil {
+			v.BeforeHandler(v, ctx)
+		}
+		result, _, err := ctx.ContractRef().NativeCall(testCaller, this, v.Payload)
+		assert.Equal(t, v.Expect, err)
+		assert.Equal(t, v.ReturnData, result)
+		if v.AfterHandler != nil {
+			v.AfterHandler(v, ctx)
+		}
+	}
+}
+
+func TestMethodEnableNodeWhite(t *testing.T) {
+	type TestCase struct {
+		Payload       []byte
+		BeforeHandler func(c *TestCase, ctx *native.NativeContract)
+		AfterHandler  func(c *TestCase, ctx *native.NativeContract)
+		Expect        error
+		ReturnData    []byte
+	}
+
+	cases := []*TestCase{
+		{
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				payload, err := utils.PackMethod(ABI, MethodIsNodeWhiteEnabled)
+				assert.NoError(t, err)
+				c.Payload = payload
+			},
+			ReturnData: encodeMethodBoolOutput(false, MethodIsNodeWhiteEnabled),
+			Expect:     nil,
+		},
+		{
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				input := &MethodEnableNodeWhiteInput{DoEnable: true}
+				c.Payload, _ = input.Encode()
+			},
+			ReturnData: []byte{'0'},
+			Expect:     errors.New("invalid authority for owner"),
+		},
+		{
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				setDefaultOwner(ctx)
+				input := &MethodEnableNodeWhiteInput{DoEnable: true}
+				c.Payload, _ = input.Encode()
+			},
+			Expect:     nil,
+			ReturnData: []byte{'1'},
+		},
+		{
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				payload, err := utils.PackMethod(ABI, MethodIsNodeWhiteEnabled)
+				assert.NoError(t, err)
+				c.Payload = payload
+			},
+			ReturnData: encodeMethodBoolOutput(true, MethodIsNodeWhiteEnabled),
+			Expect:     nil,
+		},
+		{
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				setDefaultOwner(ctx)
+				input := &MethodEnableNodeWhiteInput{DoEnable: false}
+				c.Payload, _ = input.Encode()
+			},
+			Expect:     nil,
+			ReturnData: []byte{'1'},
+		},
+		{
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				payload, err := utils.PackMethod(ABI, MethodIsNodeWhiteEnabled)
+				assert.NoError(t, err)
+				c.Payload = payload
+			},
+			ReturnData: encodeMethodBoolOutput(false, MethodIsNodeWhiteEnabled),
+			Expect:     nil,
+		},
+	}
+
+	resetTestContext()
+	ctx := generateNativeContract(testCaller, 3)
+
+	for _, v := range cases {
+		if v.BeforeHandler != nil {
+			v.BeforeHandler(v, ctx)
+		}
+		result, _, err := ctx.ContractRef().NativeCall(testCaller, this, v.Payload)
+		assert.Equal(t, v.Expect, err)
+		assert.Equal(t, v.ReturnData, result)
+	}
+}
+
+func TestMethodSetGasManager(t *testing.T) {
+	type TestCase struct {
+		BlockNum      int
+		Payload       []byte
+		BeforeHandler func(c *TestCase, ctx *native.NativeContract)
+		AfterHandler  func(c *TestCase, ctx *native.NativeContract)
+		ReturnData    []byte
+		Expect        error
+	}
+	cases := []*TestCase{
+		{
+			BlockNum: 3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				input := &MethodSetGasManagerInput{Addr: testAddresses[3], IsManager: true}
+				c.Payload, _ = input.Encode()
+			},
+			ReturnData: []byte{'0'},
+			Expect:     errors.New("invalid authority for owner"),
+		},
+		{
+			BlockNum: 3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				setDefaultOwner(ctx)
+				input := &MethodSetGasManagerInput{Addr: testAddresses[3], IsManager: true}
+				c.Payload, _ = input.Encode()
+			},
+			ReturnData: []byte{'1'},
+			Expect:     nil,
+		},
+		{
+			BlockNum: 3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				input := &MethodIsGasManagerInput{Addr: testAddresses[3]}
+				c.Payload, _ = input.Encode()
+			},
+			ReturnData: encodeMethodBoolOutput(true, MethodIsGasManager),
+			Expect:     nil,
+		},
+		{
+			BlockNum: 3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				c.Payload, _ = utils.PackMethod(ABI, MethodGetGasManagerList)
+			},
+			ReturnData: encodeMethodStringOutput("[\""+strings.ToLower(testAddresses[3].String())+"\"]", MethodGetGasManagerList),
+			Expect:     nil,
+		},
+		{
+			BlockNum: 3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				setDefaultOwner(ctx)
+				input := &MethodSetGasManagerInput{Addr: testAddresses[3], IsManager: false}
+				c.Payload, _ = input.Encode()
+			},
+			ReturnData: []byte{'1'},
+			Expect:     nil,
+		},
+		{
+			BlockNum: 3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				input := &MethodIsGasManagerInput{Addr: testAddresses[3]}
+				c.Payload, _ = input.Encode()
+			},
+			ReturnData: encodeMethodBoolOutput(false, MethodIsGasManager),
+			Expect:     nil,
+		},
+		{
+			BlockNum: 3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				c.Payload, _ = utils.PackMethod(ABI, MethodGetGasManagerList)
+			},
+			ReturnData: encodeMethodStringOutput("[]", MethodGetGasManagerList),
+			Expect:     nil,
+		},
+	}
+
+	resetTestContext()
+	for _, v := range cases {
+		ctx := generateNativeContract(testCaller, v.BlockNum)
+
+		if v.BeforeHandler != nil {
+			v.BeforeHandler(v, ctx)
+		}
+		result, _, err := ctx.ContractRef().NativeCall(testCaller, this, v.Payload)
+		assert.Equal(t, v.Expect, err)
+		assert.Equal(t, v.ReturnData, result)
+		if v.AfterHandler != nil {
+			v.AfterHandler(v, ctx)
+		}
+	}
+}
+
+func TestMethodEnableGasManage(t *testing.T) {
+	type TestCase struct {
+		Payload       []byte
+		BeforeHandler func(c *TestCase, ctx *native.NativeContract)
+		AfterHandler  func(c *TestCase, ctx *native.NativeContract)
+		Expect        error
+		ReturnData    []byte
+	}
+
+	cases := []*TestCase{
+		{
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				payload, err := utils.PackMethod(ABI, MethodIsGasManageEnabled)
+				assert.NoError(t, err)
+				c.Payload = payload
+			},
+			ReturnData: encodeMethodBoolOutput(false, MethodIsGasManageEnabled),
+			Expect:     nil,
+		},
+		{
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				input := &MethodEnableGasManageInput{DoEnable: true}
+				c.Payload, _ = input.Encode()
+			},
+			ReturnData: []byte{'0'},
+			Expect:     errors.New("invalid authority for owner"),
+		},
+		{
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				setDefaultOwner(ctx)
+				input := &MethodEnableGasManageInput{DoEnable: true}
+				c.Payload, _ = input.Encode()
+			},
+			Expect:     nil,
+			ReturnData: []byte{'1'},
+		},
+		{
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				payload, err := utils.PackMethod(ABI, MethodIsGasManageEnabled)
+				assert.NoError(t, err)
+				c.Payload = payload
+			},
+			ReturnData: encodeMethodBoolOutput(true, MethodIsGasManageEnabled),
+			Expect:     nil,
+		},
+		{
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				setDefaultOwner(ctx)
+				input := &MethodEnableGasManageInput{DoEnable: false}
+				c.Payload, _ = input.Encode()
+			},
+			Expect:     nil,
+			ReturnData: []byte{'1'},
+		},
+		{
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				payload, err := utils.PackMethod(ABI, MethodIsGasManageEnabled)
+				assert.NoError(t, err)
+				c.Payload = payload
+			},
+			ReturnData: encodeMethodBoolOutput(false, MethodIsGasManageEnabled),
+			Expect:     nil,
+		},
+	}
+
+	resetTestContext()
+	ctx := generateNativeContract(testCaller, 3)
+
+	for _, v := range cases {
+		if v.BeforeHandler != nil {
+			v.BeforeHandler(v, ctx)
+		}
+		result, _, err := ctx.ContractRef().NativeCall(testCaller, this, v.Payload)
+		assert.Equal(t, v.Expect, err)
+		assert.Equal(t, v.ReturnData, result)
 	}
 }

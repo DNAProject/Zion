@@ -40,8 +40,6 @@ func TestABIMethodChangeOwnerInput(t *testing.T) {
 	enc, err := expect.Encode()
 	assert.NoError(t, err)
 	methodId := hexutil.Encode(crypto.Keccak256([]byte("changeOwner(address)"))[:4])
-	t.Log("expected methodId of changeOwner ", methodId)
-	t.Log("actual methodId of changedOwner ", hexutil.Encode(enc)[:10])
 	assert.Equal(t, methodId, hexutil.Encode(enc)[:10])
 	got := new(MethodChangeOwnerInput)
 	assert.NoError(t, got.Decode(enc))
@@ -119,10 +117,6 @@ func TestMethodBlockAccountInput(t *testing.T) {
 		assert.NoError(t, err)
 
 		methodId := hexutil.Encode(crypto.Keccak256([]byte("blockAccount(address,bool)"))[:4])
-		t.Log("expected methodId of blockAccount ", methodId)
-		t.Log("actual methodId of blockAccount ", hexutil.Encode(enc)[:10])
-		t.Log("\n")
-
 		assert.Equal(t, methodId, hexutil.Encode(enc)[:10])
 
 		got := new(MethodBlockAccountInput)
@@ -165,9 +159,7 @@ func TestMethodIsBlockedInput(t *testing.T) {
 		assert.NoError(t, err)
 
 		methodId := hexutil.Encode(crypto.Keccak256([]byte("isBlocked(address)"))[:4])
-		t.Log("expected methodId of isBlocked ", methodId)
-		t.Log("actual methodId of isBlocked ", hexutil.Encode(enc)[:10])
-		t.Log("\n")
+		assert.Equal(t, methodId, hexutil.Encode(enc)[:10])
 
 		got := new(MethodIsBlockedInput)
 		err = got.Decode(enc)
@@ -209,5 +201,149 @@ func TestMethodGetBlacklistOutput(t *testing.T) {
 		err = got.Decode(enc, MethodGetBlacklist)
 		assert.NoError(t, err)
 		assert.Equal(t, got, output)
+	}
+}
+
+func TestMethodEnableNodeWhiteInput(t *testing.T) {
+	var cases = []struct{ DoEnable bool }{
+		{true},
+		{false},
+	}
+
+	for _, testCase := range cases {
+		input := &MethodEnableNodeWhiteInput{testCase.DoEnable}
+		enc, err := input.Encode()
+		assert.NoError(t, err)
+
+		methodId := hexutil.Encode(crypto.Keccak256([]byte(MethodEnableNodeWhite + "(bool)"))[:4])
+		assert.Equal(t, methodId, hexutil.Encode(enc)[:10])
+
+		got := new(MethodEnableNodeWhiteInput)
+		err = got.Decode(enc)
+		assert.NoError(t, err)
+		assert.Equal(t, got, input)
+	}
+}
+
+func TestMethodSetNodeWhiteInput(t *testing.T) {
+	var cases = []struct {
+		Addr    common.Address
+		IsWhite bool
+	}{
+		{
+			Addr:    testAddresses[0],
+			IsWhite: false,
+		},
+		{
+			Addr:    testAddresses[1],
+			IsWhite: true,
+		},
+	}
+
+	for _, testCase := range cases {
+		input := &MethodSetNodeWhiteInput{testCase.Addr, testCase.IsWhite}
+		enc, err := input.Encode()
+		assert.NoError(t, err)
+
+		methodId := hexutil.Encode(crypto.Keccak256([]byte(MethodSetNodeWhite + "(address,bool)"))[:4])
+		assert.Equal(t, methodId, hexutil.Encode(enc)[:10])
+
+		got := new(MethodSetNodeWhiteInput)
+		err = got.Decode(enc)
+		assert.NoError(t, err)
+		assert.Equal(t, got, input)
+	}
+}
+
+func TestMethodIsInNodeWhiteInput(t *testing.T) {
+	var cases = []struct{ Addr common.Address }{
+		{testAddresses[1]},
+		{testAddresses[0]},
+	}
+
+	for _, testCase := range cases {
+		input := &MethodIsInNodeWhiteInput{testCase.Addr}
+		enc, err := input.Encode()
+		assert.NoError(t, err)
+
+		methodId := hexutil.Encode(crypto.Keccak256([]byte(MethodIsInNodeWhite + "(address)"))[:4])
+		assert.Equal(t, methodId, hexutil.Encode(enc)[:10])
+
+		got := new(MethodIsInNodeWhiteInput)
+		err = got.Decode(enc)
+		assert.NoError(t, err)
+		assert.Equal(t, got, input)
+	}
+}
+
+func TestMethodEnableGasManageInput(t *testing.T) {
+	var cases = []struct{ DoEnable bool }{
+		{true},
+		{false},
+	}
+
+	for _, testCase := range cases {
+		input := &MethodEnableGasManageInput{testCase.DoEnable}
+		enc, err := input.Encode()
+		assert.NoError(t, err)
+
+		methodId := hexutil.Encode(crypto.Keccak256([]byte(MethodEnableGasManage + "(bool)"))[:4])
+		assert.Equal(t, methodId, hexutil.Encode(enc)[:10])
+
+		got := new(MethodEnableGasManageInput)
+		err = got.Decode(enc)
+		assert.NoError(t, err)
+		assert.Equal(t, got, input)
+	}
+}
+
+func TestMethodSetGasManagerInput(t *testing.T) {
+	var cases = []struct {
+		Addr    common.Address
+		IsWhite bool
+	}{
+		{
+			Addr:    testAddresses[0],
+			IsWhite: false,
+		},
+		{
+			Addr:    testAddresses[1],
+			IsWhite: true,
+		},
+	}
+
+	for _, testCase := range cases {
+		input := &MethodSetGasManagerInput{testCase.Addr, testCase.IsWhite}
+		enc, err := input.Encode()
+		assert.NoError(t, err)
+
+		methodId := hexutil.Encode(crypto.Keccak256([]byte(MethodSetGasManager + "(address,bool)"))[:4])
+		assert.Equal(t, methodId, hexutil.Encode(enc)[:10])
+
+		got := new(MethodSetGasManagerInput)
+		err = got.Decode(enc)
+		assert.NoError(t, err)
+		assert.Equal(t, got, input)
+	}
+}
+
+func TestMethodIsGasManagerInput(t *testing.T) {
+	var cases = []struct{ Addr common.Address }{
+		{testAddresses[1]},
+		{testAddresses[0]},
+	}
+
+	for _, testCase := range cases {
+		input := &MethodIsGasManagerInput{testCase.Addr}
+		enc, err := input.Encode()
+		assert.NoError(t, err)
+
+		methodId := hexutil.Encode(crypto.Keccak256([]byte(MethodIsGasManager + "(address)"))[:4])
+		assert.Equal(t, methodId, hexutil.Encode(enc)[:10])
+
+		got := new(MethodIsGasManagerInput)
+		err = got.Decode(enc)
+		assert.NoError(t, err)
+		assert.Equal(t, got, input)
 	}
 }
