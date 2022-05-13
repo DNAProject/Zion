@@ -30,7 +30,6 @@ import (
 )
 
 var ErrAccountBlocked = errors.New("account is in blacklist")
-var ErrNotInNodeWhite = errors.New("node address is not in node whitelist")
 var ErrNotGasManager = errors.New("address is not in gas manager list")
 
 func IsBlocked(state *state.StateDB, address *common.Address) bool {
@@ -57,53 +56,6 @@ func IsBlocked(state *state.StateDB, address *common.Address) bool {
 	}
 
 	log.Debug("IsBlocked: " + address.String() + ", " + strconv.FormatBool(output.Success))
-	return output.Success
-}
-
-func IsNodeWhiteEnable(state *state.StateDB) bool {
-	caller := common.EmptyAddress
-	ref := native.NewContractRef(state, caller, caller, big.NewInt(-1), common.EmptyHash, 0, nil)
-
-	payload, err := utils.PackMethod(maas_config.ABI, maas_config.MethodIsNodeWhiteEnabled)
-	if err != nil {
-		log.Error("[PackMethod]", "pack `IsNodeWhiteEnable` input failed", err)
-		return false
-	}
-	enc, _, err := ref.NativeCall(caller, utils.MaasConfigContractAddress, payload)
-	if err != nil {
-		return false
-	}
-	output := new(maas_config.MethodBoolOutput)
-	if err := output.Decode(enc, maas_config.MethodIsNodeWhiteEnabled); err != nil {
-		log.Error("[native call]", "unpack `IsNodeWhiteEnable` output failed", err)
-		return false
-	}
-
-	return output.Success
-}
-
-func IsInNodeWhite(state *state.StateDB, address *common.Address) bool {
-	if address == nil {
-		return false
-	}
-	caller := common.EmptyAddress
-	ref := native.NewContractRef(state, caller, caller, big.NewInt(-1), common.EmptyHash, 0, nil)
-
-	payload, err := (&maas_config.MethodIsInNodeWhiteInput{Addr: *address}).Encode()
-	if err != nil {
-		log.Error("[PackMethod]", "pack `IsInNodeWhite` input failed", err)
-		return false
-	}
-	enc, _, err := ref.NativeCall(caller, utils.MaasConfigContractAddress, payload)
-	if err != nil {
-		return false
-	}
-	output := new(maas_config.MethodBoolOutput)
-	if err := output.Decode(enc, maas_config.MethodIsInNodeWhite); err != nil {
-		log.Error("[native call]", "unpack `IsInNodeWhite` output failed", err)
-		return false
-	}
-
 	return output.Success
 }
 

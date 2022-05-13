@@ -38,12 +38,6 @@ var (
 		MethodIsBlocked:    0,
 		MethodGetBlacklist: 0,
 
-		MethodEnableNodeWhite:    30000,
-		MethodIsNodeWhiteEnabled: 0,
-		MethodSetNodeWhite:       30000,
-		MethodGetNodeWhitelist:   0,
-		MethodIsInNodeWhite:      0,
-
 		MethodEnableGasManage:    30000,
 		MethodSetGasManager:      30000,
 		MethodIsGasManageEnabled: 0,
@@ -67,12 +61,6 @@ func RegisterMaasConfigContract(s *native.NativeContract) {
 	s.Register(MethodBlockAccount, BlockAccount)
 	s.Register(MethodIsBlocked, IsBlocked)
 	s.Register(MethodGetBlacklist, GetBlacklist)
-
-	s.Register(MethodEnableNodeWhite, EnableNodeWhite)
-	s.Register(MethodIsNodeWhiteEnabled, IsNodeWhiteEnabled)
-	s.Register(MethodSetNodeWhite, SetNodeWhite)
-	s.Register(MethodGetNodeWhitelist, GetNodeWhitelist)
-	s.Register(MethodIsInNodeWhite, IsInNodeWhite)
 
 	s.Register(MethodEnableGasManage, EnableGasManage)
 	s.Register(MethodSetGasManager, SetGasManager)
@@ -247,117 +235,6 @@ func GetBlacklist(s *native.NativeContract) ([]byte, error) {
 	result, _ := json.Marshal(list)
 	output := &MethodStringOutput{Result: string(result)}
 	return output.Encode(MethodGetBlacklist)
-}
-
-// enable node whitelist
-func EnableNodeWhite(s *native.NativeContract) ([]byte, error) {
-	ctx := s.ContractRef().CurrentContext()
-
-	// check owner
-	if err := validateOwner(s); err != nil {
-		return utils.ByteFailed, err
-	}
-
-	// decode input
-	input := new(MethodEnableNodeWhiteInput)
-	if err := input.Decode(ctx.Payload); err != nil {
-		log.Trace("EnableNodeWhite", "decode input failed", err)
-		return utils.ByteFailed, errors.New("invalid input")
-	}
-
-	// set enable status
-	if input.DoEnable {
-		set(s, nodeWhiteEnableKey, utils.BYTE_TRUE)
-	} else {
-		del(s, nodeWhiteEnableKey)
-	}
-
-	// emit event log
-	if err := s.AddNotify(ABI, []string{EventEnableNodeWhite}, input.DoEnable); err != nil {
-		log.Trace("EnableNodeWhite", "emit event log failed", err)
-		return utils.ByteFailed, errors.New("emit EventEnableNodeWhite error")
-	}
-
-	return utils.ByteSuccess, nil
-}
-
-// check if node whitelist is enabled
-func IsNodeWhiteEnabled(s *native.NativeContract) ([]byte, error) {
-	// get value
-	value, _ := get(s, nodeWhiteEnableKey)
-	output := &MethodBoolOutput{Success: len(value) > 0}
-	return output.Encode(MethodIsNodeWhiteEnabled)
-}
-
-// set node whitelist for p2p connection
-func SetNodeWhite(s *native.NativeContract) ([]byte, error) {
-	ctx := s.ContractRef().CurrentContext()
-
-	// check owner
-	if err := validateOwner(s); err != nil {
-		return utils.ByteFailed, err
-	}
-
-	// decode input
-	input := new(MethodSetNodeWhiteInput)
-	if err := input.Decode(ctx.Payload); err != nil {
-		log.Trace("setNodeWhite", "decode input failed", err)
-		return utils.ByteFailed, errors.New("invalid input")
-	}
-
-	m := getAddressMap(s, nodeWhitelistKey)
-	if input.IsWhite {
-		m[input.Addr] = struct{}{}
-	} else {
-		delete(m, input.Addr)
-	}
-
-	value, err := json.Marshal(m)
-	if err != nil {
-		log.Trace("setNodeWhite", "encode value failed", err)
-		return utils.ByteFailed, errors.New("encode value failed")
-	}
-	set(s, nodeWhitelistKey, value)
-
-	// emit event log
-	if err := s.AddNotify(ABI, []string{EventSetNodeWhite}, common.BytesToHash(input.Addr.Bytes()), input.IsWhite); err != nil {
-		log.Trace("setNodeWhite", "emit event log failed", err)
-		return utils.ByteFailed, errors.New("emit EventSetNodeWhite error")
-	}
-
-	return utils.ByteSuccess, nil
-}
-
-// check if address is in node whitelist
-func IsInNodeWhite(s *native.NativeContract) ([]byte, error) {
-	ctx := s.ContractRef().CurrentContext()
-
-	// decode input
-	input := new(MethodIsInNodeWhiteInput)
-	if err := input.Decode(ctx.Payload); err != nil {
-		log.Trace("IsInNodeWhite", "decode input failed", err)
-		return utils.ByteFailed, errors.New("invalid input")
-	}
-
-	// get value
-	m := getAddressMap(s, nodeWhitelistKey)
-	_, ok := m[input.Addr]
-	output := &MethodBoolOutput{Success: ok}
-
-	return output.Encode(MethodIsInNodeWhite)
-}
-
-// get node whitelist json
-func GetNodeWhitelist(s *native.NativeContract) ([]byte, error) {
-	// get value
-	m := getAddressMap(s, nodeWhitelistKey)
-	list := make([]common.Address, 0, len(m))
-	for key := range m {
-		list = append(list, key)
-	}
-	result, _ := json.Marshal(list)
-	output := &MethodStringOutput{Result: string(result)}
-	return output.Encode(MethodGetNodeWhitelist)
 }
 
 // enable gas manage

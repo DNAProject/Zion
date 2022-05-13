@@ -42,12 +42,6 @@ const (
 	MethodIsBlocked    = "isBlocked"
 	MethodGetBlacklist = "getBlacklist"
 
-	MethodEnableNodeWhite    = "enableNodeWhite"
-	MethodSetNodeWhite       = "setNodeWhite"
-	MethodGetNodeWhitelist   = "getNodeWhitelist"
-	MethodIsInNodeWhite      = "isInNodeWhite"
-	MethodIsNodeWhiteEnabled = "isNodeWhiteEnabled"
-
 	MethodEnableGasManage    = "enableGasManage"
 	MethodSetGasManager      = "setGasManager"
 	MethodIsGasManageEnabled = "isGasManageEnabled"
@@ -57,9 +51,7 @@ const (
 	EventChangeOwner     = "ChangeOwner"
 	EventBlockAccount    = "BlockAccount"
 	EventEnableGasManage = "EnableGasManage"
-	EventEnableNodeWhite = "EnableNodeWhite"
 	EventSetGasManager   = "SetGasManager"
-	EventSetNodeWhite    = "SetNodeWhite"
 )
 
 func InitABI() {
@@ -181,43 +173,6 @@ func (m *MethodStringOutput) Encode(methodName string) ([]byte, error) {
 
 func (m *MethodStringOutput) Decode(payload []byte, methodName string) error {
 	return utils.UnpackOutputs(ABI, methodName, m, payload)
-}
-
-type MethodEnableNodeWhiteInput struct {
-	DoEnable bool
-}
-
-func (m *MethodEnableNodeWhiteInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodEnableNodeWhite, m.DoEnable)
-}
-
-func (m *MethodEnableNodeWhiteInput) Decode(payload []byte) error {
-	return utils.UnpackMethod(ABI, MethodEnableNodeWhite, m, payload)
-}
-
-type MethodSetNodeWhiteInput struct {
-	Addr    common.Address
-	IsWhite bool
-}
-
-func (m *MethodSetNodeWhiteInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodSetNodeWhite, m.Addr, m.IsWhite)
-}
-
-func (m *MethodSetNodeWhiteInput) Decode(payload []byte) error {
-	return utils.UnpackMethod(ABI, MethodSetNodeWhite, m, payload)
-}
-
-type MethodIsInNodeWhiteInput struct {
-	Addr common.Address
-}
-
-func (m *MethodIsInNodeWhiteInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodIsInNodeWhite, m.Addr)
-}
-
-func (m *MethodIsInNodeWhiteInput) Decode(payload []byte) error {
-	return utils.UnpackMethod(ABI, MethodIsInNodeWhite, m, payload)
 }
 
 type MethodEnableGasManageInput struct {
