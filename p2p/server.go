@@ -31,7 +31,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/contracts/native/native_client"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -42,6 +41,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/ethereum/go-ethereum/p2p/nat"
 	"github.com/ethereum/go-ethereum/p2p/netutil"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 const (
@@ -975,14 +975,23 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	}
 
 	// check if address is in node whitelist
-	stateDb, err := srv.Chain.StateAt(srv.Chain.CurrentBlock().Root())
-	if err != nil {
-		srv.log.Trace("Failed to get stateDB", "err", err)
-		return err
-	}
+	// stateDb, err := srv.Chain.StateAt(srv.Chain.CurrentBlock().Root())
+	// if err != nil {
+	// 	srv.log.Trace("Failed to get stateDB", "err", err)
+	// 	return err
+	// }
+	// remoteAddr := crypto.PubkeyToAddress(*remotePubkey)
+	// if native_client.IsNodeWhiteEnable(stateDb) && !native_client.IsInNodeWhite(stateDb, &remoteAddr) {
+	// 	srv.log.Trace("Failed to connect to node", "node address", remoteAddr.String(), "err", err)
+	// 	return native_client.ErrNotInNodeWhite
+	// }
+
+	// check if address is in node whitelist
 	remoteAddr := crypto.PubkeyToAddress(*remotePubkey)
-	if native_client.IsNodeWhiteEnable(stateDb) && !native_client.IsInNodeWhite(stateDb, &remoteAddr) {
-		return native_client.ErrNotInNodeWhite
+	var nodeWhiteConfig = params.GetNodeWhiteConfig()
+	if !nodeWhiteConfig.CheckNodeWhitelist(&remoteAddr) {
+		srv.log.Trace("Node address not in whitelist", "addr", remoteAddr.String(), "err", params.ErrNodeWhitelist)
+		return params.ErrNodeWhitelist
 	}
 
 	if dialDest != nil {
