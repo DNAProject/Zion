@@ -350,6 +350,7 @@ type HotStuffConfig struct {
 	ForkHeight     uint64   `json:"forkHeight"`
 	ForkValidators []string `json:"forkValidators"`
 	ForkEpochId    uint64   `json:"forkEpochId"`
+	Incentive      uint64   `json:"incentive"`
 }
 
 func (h *HotStuffConfig) Decode(data []byte) error {

@@ -105,17 +105,20 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 	return nil
 }
 
-func accumulateRewards(state *state.StateDB, header *types.Header) {
-	blockReward := big.NewInt(2e+18)
+func accumulateRewards(state *state.StateDB, validators []common.Address, reward uint64) {
+	// No need to check overflow
+	blockReward := big.NewInt(1).Mul(big.NewInt(1e+18), big.NewInt(int64(reward)))
 	// Accumulate the rewards for the miner and any included uncles
-	reward := new(big.Int).Set(blockReward)
-	state.AddBalance(header.Coinbase, reward)
+	reward_ := new(big.Int).Set(blockReward)
+	for _, validator := range validators {
+		state.AddBalance(validator, reward_)
+	}
 }
 
 func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header) {
 	// reward validators at forking start block
 	if header.Number.Uint64() == s.config.HotStuffConfig.ForkHeight {
-		accumulateRewards(state, header)
+		accumulateRewards(state, s.Validators(s.config.HotStuffConfig.ForkHeight).AddressList(), s.config.HotStuffConfig.Incentive)
 	}
 	// No block rewards in Istanbul, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -126,7 +129,7 @@ func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header 
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	// reward validators at forking start block
 	if header.Number.Uint64() == s.config.HotStuffConfig.ForkHeight {
-		accumulateRewards(state, header)
+		accumulateRewards(state, s.Validators(s.config.HotStuffConfig.ForkHeight).AddressList(), s.config.HotStuffConfig.Incentive)
 	}
 	/// No block rewards in Istanbul, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
