@@ -94,16 +94,15 @@ func ChangeOwner(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	caller := ctx.Caller
 
-	// check authority
+	// check caller == origin
 	if err := contract.ValidateOwner(s, caller); err != nil {
-		return utils.ByteFailed, errors.New("invalid authority for caller")
+		return utils.ByteFailed, errors.New("caller is not equal to origin")
 	}
 
+	// check owner
 	currentOwner := getOwner(s)
-	if currentOwner != common.EmptyAddress {
-		if err := contract.ValidateOwner(s, currentOwner); err != nil {
-			return utils.ByteFailed, errors.New("invalid authority for owner")
-		}
+	if currentOwner != common.EmptyAddress && caller != currentOwner {
+		return utils.ByteFailed, errors.New("invalid authority for owner")
 	}
 
 	// decode input
@@ -149,17 +148,35 @@ func getOwner(s *native.NativeContract) common.Address {
 	return common.BytesToAddress(value)
 }
 
-func validateOwner(s *native.NativeContract) error {
+func checkOwner(s *native.NativeContract) error {
 	caller := s.ContractRef().CurrentContext().Caller
-	if err := contract.ValidateOwner(s, caller); err != nil {
-		log.Trace("validateOwner", "ValidateOwner caller failed", err)
-		return errors.New("invalid authority for caller")
+	origin := s.ContractRef().TxOrigin()
+	if caller != origin {
+		return errors.New("caller is not equal to origin")
 	}
 
-	currentOwner := getOwner(s)
-	if err := contract.ValidateOwner(s, currentOwner); err != nil {
-		log.Trace("validateOwner", "ValidateOwner owner failed", err)
+	if origin != getOwner(s) {
 		return errors.New("invalid authority for owner")
+	}
+	return nil
+}
+
+func isAdmin(s *native.NativeContract) bool {
+	origin := s.ContractRef().TxOrigin()
+	m := getAddressMap(s, gasAdminListKey)
+	_, ok := m[origin]
+	return ok
+}
+
+func checkOwnerOrAdmin(s *native.NativeContract) error {
+	caller := s.ContractRef().CurrentContext().Caller
+	origin := s.ContractRef().TxOrigin()
+	if caller != origin {
+		return errors.New("caller is not equal to origin")
+	}
+
+	if origin != getOwner(s) && !isAdmin(s) {
+		return errors.New("invalid authority for owner or admin")
 	}
 	return nil
 }
@@ -169,7 +186,7 @@ func BlockAccount(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 
 	// check owner
-	if err := validateOwner(s); err != nil {
+	if err := checkOwner(s); err != nil {
 		return utils.ByteFailed, err
 	}
 
@@ -258,7 +275,7 @@ func EnableGasManage(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 
 	// check owner
-	if err := validateOwner(s); err != nil {
+	if err := checkOwner(s); err != nil {
 		return utils.ByteFailed, err
 	}
 
@@ -298,7 +315,7 @@ func SetGasManager(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 
 	// check owner
-	if err := validateOwner(s); err != nil {
+	if err := checkOwner(s); err != nil {
 		return utils.ByteFailed, err
 	}
 
@@ -369,7 +386,7 @@ func SetGasUsers(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 
 	// check owner
-	if err := validateOwner(s); err != nil {
+	if err := checkOwnerOrAdmin(s); err != nil {
 		return utils.ByteFailed, err
 	}
 
@@ -442,7 +459,7 @@ func SetAdmins(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 
 	// check owner
-	if err := validateOwner(s); err != nil {
+	if err := checkOwner(s); err != nil {
 		return utils.ByteFailed, err
 	}
 
