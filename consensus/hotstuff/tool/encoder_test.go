@@ -20,13 +20,16 @@ package tool
 
 import (
 	"encoding/json"
+	"log"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -138,6 +141,37 @@ func TestEncodeSalt(t *testing.T) {
 func TestGenerateAndEncode(t *testing.T) {
 	nodes := generateNodes(7)
 	dumpNodes(t, nodes)
+}
+
+func TestGenerateKeyStore(t *testing.T) {
+	nodekey := "26cc96a0d256d45e1515bf325bec1925746d796b3637b147f35a01d6c2d6399b"
+	passphrase := "Onchain@Maas"
+
+	privateKey, err := crypto.HexToECDSA(nodekey)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create the keyfile object with a random UUID.
+	UUID, err := uuid.NewRandom()
+	if err != nil {
+		log.Fatalf("Failed to generate random uuid: %v", err)
+	}
+	key := &keystore.Key{
+		Id:         UUID,
+		Address:    crypto.PubkeyToAddress(privateKey.PublicKey),
+		PrivateKey: privateKey,
+	}
+
+	// Encrypt key with passphrase.
+	scryptN, scryptP := keystore.StandardScryptN, keystore.StandardScryptP
+
+	keyjson, err := keystore.EncryptKey(key, passphrase, scryptN, scryptP)
+	if err != nil {
+		t.Fatalf("Error encrypting key: %v", err)
+	}
+	t.Log(keyjson)
+	log.Println(string(keyjson))
 }
 
 func dumpNodes(t *testing.T, nodes []*Node) {

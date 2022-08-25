@@ -95,6 +95,9 @@ type Config struct {
 	// Node whitelist config file path.
 	NodeWhitePath string `toml:",omitempty"`
 
+	// Nodekey password.
+	NodePass string `toml:",omitempty"`
+
 	// NoUSB disables hardware wallet monitoring and connectivity.
 	NoUSB bool `toml:",omitempty"`
 
@@ -368,9 +371,20 @@ func (c *Config) NodeKey() *ecdsa.PrivateKey {
 	}
 
 	keyfile := c.ResolvePath(datadirPrivateKey)
-	if key, err := crypto.LoadECDSA(keyfile); err == nil {
+	if _, err := os.Stat(keyfile); err == nil {
+		if key, err := crypto.LoadECDSA(keyfile); err == nil {
+			return key
+		}
+
+		nodePassword := c.NodePass
+		key, err := loadKeyStore(keyfile, nodePassword)
+		if err != nil {
+			log.Error(fmt.Sprintf("Failed to load load keystore %v", err))
+			return nil
+		}
 		return key
 	}
+
 	// No persistent key found, generate and store a new one.
 	key, err := crypto.GenerateKey()
 	if err != nil {
@@ -386,6 +400,19 @@ func (c *Config) NodeKey() *ecdsa.PrivateKey {
 		log.Error(fmt.Sprintf("Failed to persist node key: %v", err))
 	}
 	return key
+}
+
+func loadKeyStore(file, password string) (*ecdsa.PrivateKey, error) {
+	enc, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+
+	key, err := keystore.DecryptKey(enc, password)
+	if err != nil {
+		return nil, err
+	}
+	return key.PrivateKey, nil
 }
 
 // StaticNodes returns a list of node enode URLs configured as static nodes.

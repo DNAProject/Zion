@@ -104,6 +104,7 @@ var (
 		utils.UltraLightOnlyAnnounceFlag,
 		utils.LightNoSyncServeFlag,
 		utils.WhitelistFlag,
+		utils.NodePassFlag,
 		utils.BloomFilterSizeFlag,
 		utils.CacheFlag,
 		utils.CacheDatabaseFlag,
@@ -155,7 +156,7 @@ var (
 		utils.MinerNotifyFullFlag,
 		configFileFlag,
 		utils.CatalystFlag,
-		utils.NodeWhitePath,
+		utils.NodeWhitePathFlag,
 	}
 
 	rpcFlags = []cli.Flag{
