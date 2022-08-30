@@ -29,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -152,25 +151,10 @@ func TestGenerateKeyStore(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	// Create the keyfile object with a random UUID.
-	UUID, err := uuid.NewRandom()
-	if err != nil {
-		log.Fatalf("Failed to generate random uuid: %v", err)
-	}
-	key := &keystore.Key{
-		Id:         UUID,
-		Address:    crypto.PubkeyToAddress(privateKey.PublicKey),
-		PrivateKey: privateKey,
-	}
-
-	// Encrypt key with passphrase.
-	scryptN, scryptP := keystore.StandardScryptN, keystore.StandardScryptP
-
-	keyjson, err := keystore.EncryptKey(key, passphrase, scryptN, scryptP)
+	keyjson, err := keystore.GenerateKeyJson(privateKey, passphrase)
 	if err != nil {
 		t.Fatalf("Error encrypting key: %v", err)
 	}
-	t.Log(keyjson)
 	log.Println(string(keyjson))
 }
 

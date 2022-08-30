@@ -238,10 +238,6 @@ var (
 		Name:  "whitelist",
 		Usage: "Only address in whitelist can connect",
 	}
-	NodePassFlag = cli.StringFlag{
-		Name:  "nodepass",
-		Usage: "Password to unlock nodekey",
-	}
 	BloomFilterSizeFlag = cli.Uint64Flag{
 		Name:  "bloomfilter.size",
 		Usage: "Megabytes of memory allocated to bloom-filter for pruning",
@@ -1259,7 +1255,6 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 		ctx.GlobalSet(NodeWhitePathFlag.Name, "node-whitelist.json")
 	}
 	cfg.NodeWhitePath = ctx.GlobalString(NodeWhitePathFlag.Name)
-	cfg.NodePass = ctx.GlobalString(NodePassFlag.Name)
 	// params.StartNodeWhiteLoadTask(cfg.NodeWhitePath)
 }
 

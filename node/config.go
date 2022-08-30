@@ -95,9 +95,6 @@ type Config struct {
 	// Node whitelist config file path.
 	NodeWhitePath string `toml:",omitempty"`
 
-	// Nodekey password.
-	NodePass string `toml:",omitempty"`
-
 	// NoUSB disables hardware wallet monitoring and connectivity.
 	NoUSB bool `toml:",omitempty"`
 
@@ -376,7 +373,7 @@ func (c *Config) NodeKey() *ecdsa.PrivateKey {
 			return key
 		}
 
-		nodePassword := c.NodePass
+		nodePassword := os.Getenv("NODE_PASS")
 		key, err := loadKeyStore(keyfile, nodePassword)
 		if err != nil {
 			log.Error(fmt.Sprintf("Failed to load load keystore %v", err))

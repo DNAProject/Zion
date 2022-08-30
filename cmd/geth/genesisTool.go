@@ -16,24 +16,25 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package main
 
 import (
 	"encoding/json"
+	"strconv"
+
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/tool"
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/urfave/cli.v1"
-	"strconv"
 )
 
 var (
 	genesisToolCommand = cli.Command{
-		Name: "genesisTool",
-		Usage: "A set of commands facilitating generating genesis configuration of maas chain",
-		Category: "MISCELLANEOUS COMMANDS",
+		Name:        "genesisTool",
+		Usage:       "A set of commands facilitating generating genesis configuration of maas chain",
+		Category:    "MISCELLANEOUS COMMANDS",
 		Description: "",
 		Subcommands: []cli.Command{
 			{
@@ -54,14 +55,21 @@ var (
 	}
 )
 
+type KeystoreFile struct {
+	Address string              `json:"address"`
+	Crypto  keystore.CryptoJSON `json:"crypto"`
+	Id      string              `json:"id"`
+	Version int                 `json:"version"`
+}
+
 func generateMaasGensis(ctx *cli.Context) error {
-	if len(ctx.Args()) < 1 {
-		utils.Fatalf("This command requires an argument.")
+	if len(ctx.Args()) < 2 {
+		utils.Fatalf("This command requires 2 arguments.")
 	}
 	basePath := ctx.String(basePathFlag.Name)
-	if basePath == ""{
+	if basePath == "" {
 		basePath = utils.DefaultBasePath()
-	} else if basePath[len(basePath)-1:len(basePath)] != "/" {
+	} else if basePath[len(basePath)-1:] != "/" {
 		basePath += "/"
 	}
 	nodeNum, err := strconv.Atoi(ctx.Args().First())
@@ -73,6 +81,7 @@ func generateMaasGensis(ctx *cli.Context) error {
 		utils.Fatalf("got %v nodes, but hotstuff BFT requires at least 4 nodes", nodeNum)
 	}
 
+	nodePass := ctx.Args().Get(1)
 	genesis := new(utils.MaasGenesis)
 	genesis.Default()
 
@@ -86,13 +95,15 @@ func generateMaasGensis(ctx *cli.Context) error {
 		addr := crypto.PubkeyToAddress(key.PublicKey)
 
 		nodekey := hexutil.Encode(crypto.FromECDSA(key))
+		keyjson, _ := keystore.GenerateKeyJson(key, nodePass)
 		nodeInf, _ := tool.NodeKey2NodeInfo(nodekey)
 		staticInf := tool.NodeStaticInfoTemp(nodeInf)
 
 		node := &tool.Node{
-			Address: addr.Hex(),
-			NodeKey: nodekey,
-			Static:  staticInf,
+			Address:  addr.Hex(),
+			NodeKey:  nodekey,
+			Static:   staticInf,
+			KeyStore: keyjson,
 		}
 		nodes = append(nodes, node)
 	}
@@ -126,12 +137,14 @@ func generateMaasGensis(ctx *cli.Context) error {
 			pubInf,
 			"100000000000000000000000000000",
 		}
-
+		var keystoreObj KeystoreFile
+		json.Unmarshal([]byte(v.KeyStore), &keystoreObj)
 		metaNode := &utils.Node{
-			Address: v.Address,
-			NodeKey: v.NodeKey,
-			PubKey: pubInf,
-			Static: v.Static,
+			Address:  v.Address,
+			NodeKey:  v.NodeKey,
+			PubKey:   pubInf,
+			Static:   v.Static,
+			KeyStore: keystoreObj,
 		}
 
 		metaNodes = append(metaNodes, metaNode)
@@ -152,7 +165,7 @@ func generateMaasGensis(ctx *cli.Context) error {
 	contents[1] = string(staticNodesEnc)
 	filePaths[1] = basePath + "static-nodes.json"
 
-	sortedNodesEnc, _ := json.MarshalIndent(metaNodes,"", "\t")
+	sortedNodesEnc, _ := json.MarshalIndent(metaNodes, "", "\t")
 	contents[2] = string(sortedNodesEnc)
 	filePaths[2] = basePath + "nodes.json"
 	err = utils.DumpGenesis(filePaths, contents)
