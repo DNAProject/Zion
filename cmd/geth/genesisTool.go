@@ -20,7 +20,6 @@ package main
 
 import (
 	"encoding/json"
-	"strconv"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"
@@ -41,6 +40,8 @@ var (
 				Name: "generate",
 				Flags: []cli.Flag{
 					basePathFlag,
+					nodeCountFlag,
+					nodePassFlag,
 				},
 				Action: utils.MigrateFlags(generateMaasGensis),
 			},
@@ -53,6 +54,14 @@ var (
 		Name:  "basePath",
 		Usage: "The path to store genesis configuration files",
 	}
+	nodeCountFlag = cli.IntFlag{
+		Name:  "nodeCount",
+		Usage: "The node count",
+	}
+	nodePassFlag = cli.StringFlag{
+		Name:  "nodePass",
+		Usage: "The node password to generate keystore json",
+	}
 )
 
 type KeystoreFile struct {
@@ -63,25 +72,21 @@ type KeystoreFile struct {
 }
 
 func generateMaasGensis(ctx *cli.Context) error {
-	if len(ctx.Args()) < 2 {
-		utils.Fatalf("This command requires 2 arguments.")
-	}
 	basePath := ctx.String(basePathFlag.Name)
 	if basePath == "" {
 		basePath = utils.DefaultBasePath()
 	} else if basePath[len(basePath)-1:] != "/" {
 		basePath += "/"
 	}
-	nodeNum, err := strconv.Atoi(ctx.Args().First())
-	if err != nil {
-		utils.Fatalf("parse node number error %s", err.Error())
-	}
-
+	nodeNum := ctx.Int(nodeCountFlag.Name)
 	if nodeNum < 4 {
 		utils.Fatalf("got %v nodes, but hotstuff BFT requires at least 4 nodes", nodeNum)
 	}
+	nodePass := ctx.String(nodePassFlag.Name)
+	if nodePass == "" {
+		utils.Fatalf("node password id required")
+	}
 
-	nodePass := ctx.Args().Get(1)
 	genesis := new(utils.MaasGenesis)
 	genesis.Default()
 
